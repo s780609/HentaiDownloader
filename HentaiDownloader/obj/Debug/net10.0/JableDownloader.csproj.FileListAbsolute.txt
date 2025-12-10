@@ -1,0 +1,14 @@
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\bin\Debug\net10.0\JableDownloader.exe
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\bin\Debug\net10.0\JableDownloader.deps.json
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\bin\Debug\net10.0\JableDownloader.runtimeconfig.json
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\bin\Debug\net10.0\JableDownloader.dll
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\bin\Debug\net10.0\JableDownloader.pdb
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.AssemblyInfoInputs.cache
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.AssemblyInfo.cs
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.csproj.CoreCompileInputs.cache
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.dll
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\refint\JableDownloader.dll
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.pdb
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\JableDownloader.genruntimeconfig.cache
+C:\Users\a0204\Documents\Lab\JableDownloader\JableDownloader\obj\Debug\net10.0\ref\JableDownloader.dll
