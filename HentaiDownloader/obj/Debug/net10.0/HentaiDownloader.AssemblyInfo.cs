@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HentaiDownloader")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ac6a174a4d33e5e822b0337846ee41c1842d3f6c")]
 [assembly: System.Reflection.AssemblyProductAttribute("HentaiDownloader")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HentaiDownloader")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
