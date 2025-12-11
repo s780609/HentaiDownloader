@@ -7,22 +7,78 @@ namespace HentaiDownloader.Services;
 /// </summary>
 public static class VideoExtractorService
 {
+    // 常見的 Chrome 安裝路徑
+    private static readonly string[] ChromePaths = new[]
+    {
+        @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Google\Chrome\Application\chrome.exe")
+    };
+
+    /// <summary>
+    /// 取得本機 Chrome 路徑
+    /// </summary>
+    private static string? GetLocalChromePath()
+    {
+        foreach (var path in ChromePaths)
+        {
+            if (File.Exists(path))
+            {
+                return path;
+            }
+        }
+        return null;
+    }
+
     /// <summary>
     /// 從網頁中提取影片 URL
     /// </summary>
     public static async Task<string?> ExtractVideoUrlFromPageAsync(string pageUrl)
     {
-        Console.WriteLine("正在下載瀏覽器 (首次執行需要較長時間)...");
-
-        // 下載 Chromium 瀏覽器
-        var browserFetcher = new BrowserFetcher();
-        await browserFetcher.DownloadAsync();
+        // 嘗試使用本機 Chrome
+        var chromePath = GetLocalChromePath();
+        
+        if (chromePath != null)
+        {
+            Console.WriteLine($"使用本機 Chrome: {chromePath}");
+        }
+        else
+        {
+            Console.WriteLine("找不到本機 Chrome，正在下載 Chromium...");
+            Console.WriteLine("⚠️  首次執行需要下載約 200MB，請耐心等待...");
+            Console.WriteLine();
+            
+            var browserFetcher = new BrowserFetcher();
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            // 顯示下載進度的動畫
+            var downloadTask = browserFetcher.DownloadAsync();
+            var spinnerChars = new[] { '|', '/', '-', '\\' };
+            int spinnerIndex = 0;
+            
+            while (!downloadTask.IsCompleted)
+            {
+                var elapsed = stopwatch.Elapsed;
+                Console.Write($"\r⏳ 下載中... {spinnerChars[spinnerIndex]} 已耗時: {elapsed.Minutes:D2}:{elapsed.Seconds:D2}   ");
+                spinnerIndex = (spinnerIndex + 1) % spinnerChars.Length;
+                await Task.Delay(200);
+            }
+            
+            // 確保任務完成（處理可能的異常）
+            await downloadTask;
+            
+            stopwatch.Stop();
+            Console.WriteLine();
+            Console.WriteLine($"✅ Chromium 下載完成！耗時: {stopwatch.Elapsed.TotalSeconds:F1} 秒");
+            Console.WriteLine();
+        }
 
         Console.WriteLine("正在啟動瀏覽器...");
 
         await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
             Headless = true, // 無頭模式
+            ExecutablePath = chromePath, // 使用本機 Chrome (如果有的話)
             Args = new[]
             {
                 "--no-sandbox",
@@ -393,6 +449,14 @@ public static class VideoExtractorService
                 return null;
             }
 
+            // 針對特定網站的優化選擇邏輯
+            string? autoSelectedUrl = AutoSelectBestUrl(allUrls, pageUrl);
+            if (autoSelectedUrl != null)
+            {
+                Console.WriteLine($"\n✅ 自動選擇最佳影片: {autoSelectedUrl}");
+                return autoSelectedUrl;
+            }
+
             // 優先選擇 m3u8
             var m3u8Urls = allUrls.Where(u => u.Contains(".m3u8")).ToList();
             if (m3u8Urls.Count > 0)
@@ -461,5 +525,63 @@ public static class VideoExtractorService
 
             return null;
         }
+    }
+
+    /// <summary>
+    /// 根據網站自動選擇最佳影片 URL
+    /// </summary>
+    private static string? AutoSelectBestUrl(List<string> urls, string pageUrl)
+    {
+        // hanime1.me 專用邏輯
+        if (pageUrl.Contains("hanime1.me"))
+        {
+            return SelectBestHanimeUrl(urls);
+        }
+
+        // 其他網站可以在這裡加入特定邏輯
+        
+        return null; // 返回 null 表示使用預設的選擇邏輯
+    }
+
+    /// <summary>
+    /// 選擇 hanime1.me 的最佳影片 URL
+    /// 優先選擇 vdownload.hembed.com 的高畫質 MP4
+    /// </summary>
+    private static string? SelectBestHanimeUrl(List<string> urls)
+    {
+        // 篩選 hembed.com 的 MP4 連結
+        var hembedUrls = urls
+            .Where(u => u.Contains("hembed.com") && u.Contains(".mp4"))
+            .ToList();
+
+        if (hembedUrls.Count == 0)
+        {
+            // 備選：任何包含 download 和 mp4 的連結
+            hembedUrls = urls
+                .Where(u => (u.Contains("download") || u.Contains("vdownload")) && u.Contains(".mp4"))
+                .ToList();
+        }
+
+        if (hembedUrls.Count == 0)
+        {
+            return null;
+        }
+
+        // 按畫質排序 (優先選擇高畫質)
+        // 格式通常為: xxxxx-1080p.mp4, xxxxx-720p.mp4, xxxxx-480p.mp4
+        var qualityOrder = new[] { "1080p", "720p", "480p", "360p" };
+
+        foreach (var quality in qualityOrder)
+        {
+            var match = hembedUrls.FirstOrDefault(u => u.Contains($"-{quality}.mp4"));
+            if (match != null)
+            {
+                Console.WriteLine($"[hanime1.me] 選擇 {quality} 畫質");
+                return match;
+            }
+        }
+
+        // 如果沒有符合的畫質標記，選擇第一個
+        return hembedUrls.First();
     }
 }

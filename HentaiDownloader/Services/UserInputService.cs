@@ -79,12 +79,14 @@ public static class UserInputService
     }
 
     /// <summary>
-    /// 取得輸出檔案名稱
+    /// 取得輸出檔案名稱 (支援 Unicode)
     /// </summary>
     public static string GetOutputFileName()
     {
         Console.Write("請輸入輸出檔案名稱 (不含副檔名，支援中文/日文/空格): ");
-        string? outputName = Console.ReadLine();
+        
+        // 使用支援 Unicode 的讀取方法
+        string? outputName = ConsoleService.ReadLineUnicode();
 
         // 如果未輸入，使用預設名稱
         if (string.IsNullOrWhiteSpace(outputName))
