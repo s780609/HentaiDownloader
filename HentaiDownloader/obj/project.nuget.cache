@@ -1,8 +1,16 @@
 {
   "version": 2,
-  "dgSpecHash": "XJhc921/+8o=",
+  "dgSpecHash": "9R8FXShXztI=",
   "success": true,
-  "projectFilePath": "C:\\Users\\a0204\\Documents\\Lab\\HentaiDownloader\\HentaiDownloader\\HentaiDownloader.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "D:\\Project\\HentaiDownloader\\HentaiDownloader\\HentaiDownloader.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.0\\microsoft.extensions.dependencyinjection.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.logging\\8.0.0\\microsoft.extensions.logging.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.options\\8.0.0\\microsoft.extensions.options.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
+    "C:\\Users\\TinghuanHsu\\.nuget\\packages\\puppeteersharp\\20.2.5\\puppeteersharp.20.2.5.nupkg.sha512"
+  ],
   "logs": []
 }
