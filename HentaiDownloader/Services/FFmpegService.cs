@@ -406,25 +406,8 @@ public static class FFmpegService
     {
         try
         {
-            // 建立 concat 檔案列表
-            string concatFile = Path.Combine(tempDir, "concat.txt");
-            var concatContent = new List<string>();
-
-            if (initFile != null && File.Exists(initFile))
-            {
-                concatContent.Add($"file '{initFile.Replace("\\", "/").Replace("'", "'\\''")}'");
-            }
-
-            foreach (var seg in segmentFiles)
-            {
-                concatContent.Add($"file '{seg.Replace("\\", "/").Replace("'", "'\\''")}'");
-            }
-
-            await File.WriteAllLinesAsync(concatFile, concatContent);
-
             // 使用 FFMpegCore 合併影片
             // FFMpegCore 需要知道 FFmpeg 可執行檔的位置
-            // 首先嘗試使用系統 PATH 中的 FFmpeg
             if (CheckFFmpeg())
             {
                 // 如果系統已安裝 FFmpeg，設定全域 FFmpeg 路徑
@@ -443,9 +426,18 @@ public static class FFmpegService
                 catch { }
             }
 
-            // 使用 FFMpegCore 的 FFMpegArguments 來執行 concat
+            // 準備所有要合併的檔案（包含 initFile）
+            var allFiles = new List<string>();
+            if (initFile != null && File.Exists(initFile))
+            {
+                allFiles.Add(initFile);
+            }
+            allFiles.AddRange(segmentFiles);
+
+            // 使用 FFMpegCore 的 FromConcatInput 來合併
+            // 注意：FromConcatInput 會自動建立 concat demuxer 所需的檔案列表
             await FFMpegArguments
-                .FromConcatInput(segmentFiles, options => options
+                .FromConcatInput(allFiles, options => options
                     .WithCustomArgument("-safe 0"))
                 .OutputToFile(outputFile, true, options => options
                     .CopyChannel())
