@@ -5,17 +5,18 @@
 ## ✨ 功能特色
 
 - 🎬 **多格式支援** - 支援 M3U8 (HLS)、MP4、TS 等影片格式
+- 🌐 **網頁提取** - 使用 PuppeteerSharp 自動從網頁提取影片連結
 - ⚡ **並行下載** - 使用多執行緒並行下載，大幅提升下載速度 (預設 10 個並行連線)
 - 🔐 **AES-128 解密** - 自動處理加密的 M3U8 串流 (支援 AES-128-CBC)
 - 📊 **即時進度顯示** - 顯示下載進度、速度、剩餘時間
 - 🌐 **Unicode 支援** - 完整支援中文、日文等多國語言檔名
 - 🔄 **分段續傳** - 支援 HTTP Range 請求，適合大檔案下載
-- 🎞️ **自動轉檔** - 使用 FFmpeg 自動合併片段並轉換為 MP4
+- 🎞️ **自動轉檔** - 使用 FFMpegCore 自動合併片段並轉換為 MP4
 
 ## 系統需求
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download) 或更高版本
-- [FFmpeg](https://ffmpeg.org/download.html) (M3U8 下載需要，需加入 PATH 環境變數)
+- [FFmpeg](https://ffmpeg.org/download.html) (M3U8 下載和影片轉檔需要，需加入 PATH 環境變數)
 
 ## 快速開始
 
@@ -75,6 +76,15 @@ HentaiDownloader/
 └── HentaiDownloader/
     ├── HentaiDownloader.csproj   # 專案檔案
     ├── Program.cs                # 主程式
+    ├── Services/                 # 服務類別
+    │   ├── ConsoleService.cs     # 控制台服務
+    │   ├── DownloadService.cs    # 下載服務
+    │   ├── FFmpegService.cs      # FFmpeg 服務
+    │   ├── UserInputService.cs   # 使用者輸入服務
+    │   └── VideoExtractorService.cs  # 影片提取服務
+    ├── Models/                   # 資料模型
+    │   └── M3U8Info.cs           # M3U8 資訊模型
+    ├── 影片/                      # 下載的影片儲存目錄
     ├── bin/                      # 編譯輸出
     └── obj/                      # 中間檔案
 ```
@@ -83,8 +93,10 @@ HentaiDownloader/
 
 ### 下載策略
 
-- **M3U8 串流**: 解析 M3U8 播放清單，並行下載所有 TS 片段，最後使用 FFmpeg 合併
+- **網頁提取**: 使用 PuppeteerSharp 無頭瀏覽器載入網頁，自動提取 video 標籤和網路請求中的影片 URL
+- **M3U8 串流**: 解析 M3U8 播放清單，並行下載所有 TS 片段，最後使用 FFMpegCore 合併
 - **直接連結**: 檢查伺服器是否支援 Range 請求，支援則使用分段並行下載，否則使用串流下載
+- **自動轉檔**: 下載非 MP4 格式時，自動使用 FFMpegCore 轉換為 MP4
 
 ### 加密處理
 
@@ -92,6 +104,11 @@ HentaiDownloader/
 - 自動從 `#EXT-X-KEY` 標籤取得金鑰 URL
 - 支援自訂 IV 或使用預設 IV (片段序號)
 - 下載後自動解密每個片段
+
+### 使用的技術與套件
+
+- **PuppeteerSharp 20.2.5**: 無頭瀏覽器，用於網頁解析和影片 URL 提取
+- **FFMpegCore 5.1.0**: FFmpeg 的 .NET 封裝，用於影片合併和轉檔
 
 ## 開發環境設定
 

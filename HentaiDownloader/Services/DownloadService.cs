@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using HentaiDownloader.Models;
+using FFMpegCore;
 
 namespace HentaiDownloader.Services;
 
@@ -65,7 +66,10 @@ public static class DownloadService
             // 解析失敗就用預設 .mp4
         }
 
-        string outputFile = Path.Combine(Directory.GetCurrentDirectory(), $"{outputName}{extension}");
+        // 使用指定的 影片/ 資料夾
+        string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+        Directory.CreateDirectory(videoDir); // 確保目錄存在
+        string outputFile = Path.Combine(videoDir, $"{outputName}{extension}");
 
         Console.WriteLine($"正在下載...");
         Console.WriteLine($"輸出檔案: {outputFile}");
@@ -101,10 +105,85 @@ public static class DownloadService
             Console.WriteLine();
             Console.WriteLine($"✅ 下載完成: {outputFile}");
             Console.WriteLine($"耗時: {stopwatch.Elapsed.TotalSeconds:F1} 秒");
+
+            // 如果下載的不是 MP4 格式，轉換成 MP4
+            if (!extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase))
+            {
+                await ConvertToMP4Async(outputFile, outputName);
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"\n下載失敗: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 將影片轉換為 MP4 格式
+    /// </summary>
+    private static async Task ConvertToMP4Async(string inputFile, string outputName)
+    {
+        try
+        {
+            if (!FFmpegService.CheckFFmpeg())
+            {
+                Console.WriteLine("⚠️  FFmpeg 未安裝，無法轉換為 MP4 格式");
+                return;
+            }
+
+            Console.WriteLine("\n正在轉換為 MP4 格式...");
+            
+            string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+            string outputFile = Path.Combine(videoDir, $"{outputName}.mp4");
+
+            // 設定 FFmpeg 路徑
+            var ffmpegPath = FFmpegService.GetFFmpegExecutablePath();
+            if (!string.IsNullOrEmpty(ffmpegPath))
+            {
+                var binaryFolder = Path.GetDirectoryName(ffmpegPath);
+                if (!string.IsNullOrEmpty(binaryFolder))
+                {
+                    GlobalFFOptions.Configure(new FFOptions { BinaryFolder = binaryFolder });
+                }
+            }
+
+            // 使用 FFMpegCore 轉換
+            var conversion = await FFMpegArguments
+                .FromFileInput(inputFile)
+                .OutputToFile(outputFile, true, options => options
+                    .WithVideoCodec("libx264")
+                    .WithAudioCodec("aac")
+                    .WithFastStart())
+                .ProcessAsynchronously();
+
+            if (conversion)
+            {
+                Console.WriteLine($"✅ 轉換完成: {outputFile}");
+                
+                // 詢問是否刪除原始檔案
+                Console.Write("是否刪除原始檔案? (Y/N): ");
+                string? deleteChoice = Console.ReadLine();
+                if (deleteChoice?.Trim().ToUpper() == "Y")
+                {
+                    try
+                    {
+                        File.Delete(inputFile);
+                        Console.WriteLine("已刪除原始檔案");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"刪除原始檔案失敗: {ex.Message}");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("❌ 轉換失敗");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"轉換失敗: {ex.Message}");
         }
     }
 
@@ -343,7 +422,10 @@ public static class DownloadService
 
             // 使用 FFmpeg 合併
             Console.WriteLine("正在合併片段並轉換為 MP4...");
-            string outputFile = Path.Combine(Directory.GetCurrentDirectory(), $"{outputName}.mp4");
+            // 使用指定的 影片/ 資料夾
+            string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+            Directory.CreateDirectory(videoDir); // 確保目錄存在
+            string outputFile = Path.Combine(videoDir, $"{outputName}.mp4");
 
             await FFmpegService.MergeWithFFmpegAsync(tempDir, initFile, segmentFiles.ToList(), outputFile);
 
