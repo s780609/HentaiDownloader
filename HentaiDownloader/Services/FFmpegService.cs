@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using FFMpegCore;
+using FFMpegCore.Enums;
 
 namespace HentaiDownloader.Services;
 
@@ -402,6 +404,66 @@ public static class FFmpegService
     /// </summary>
     public static async Task MergeWithFFmpegAsync(string tempDir, string? initFile, List<string> segmentFiles, string outputFile)
     {
+        try
+        {
+            // 建立 concat 檔案列表
+            string concatFile = Path.Combine(tempDir, "concat.txt");
+            var concatContent = new List<string>();
+
+            if (initFile != null && File.Exists(initFile))
+            {
+                concatContent.Add($"file '{initFile.Replace("\\", "/").Replace("'", "'\\''")}'");
+            }
+
+            foreach (var seg in segmentFiles)
+            {
+                concatContent.Add($"file '{seg.Replace("\\", "/").Replace("'", "'\\''")}'");
+            }
+
+            await File.WriteAllLinesAsync(concatFile, concatContent);
+
+            // 使用 FFMpegCore 合併影片
+            // FFMpegCore 需要知道 FFmpeg 可執行檔的位置
+            // 首先嘗試使用系統 PATH 中的 FFmpeg
+            if (CheckFFmpeg())
+            {
+                // 如果系統已安裝 FFmpeg，設定全域 FFmpeg 路徑
+                try
+                {
+                    var ffmpegPath = GetFFmpegPath();
+                    if (!string.IsNullOrEmpty(ffmpegPath))
+                    {
+                        var binaryFolder = Path.GetDirectoryName(ffmpegPath);
+                        if (!string.IsNullOrEmpty(binaryFolder))
+                        {
+                            GlobalFFOptions.Configure(new FFOptions { BinaryFolder = binaryFolder });
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // 使用 FFMpegCore 的 FFMpegArguments 來執行 concat
+            await FFMpegArguments
+                .FromConcatInput(segmentFiles, options => options
+                    .WithCustomArgument("-safe 0"))
+                .OutputToFile(outputFile, true, options => options
+                    .CopyChannel())
+                .ProcessAsynchronously();
+        }
+        catch (Exception ex)
+        {
+            // 如果 FFMpegCore 失敗，回退到直接呼叫 FFmpeg
+            Console.WriteLine($"FFMpegCore 合併失敗，嘗試直接呼叫 FFmpeg: {ex.Message}");
+            await MergeWithFFmpegDirectAsync(tempDir, initFile, segmentFiles, outputFile);
+        }
+    }
+
+    /// <summary>
+    /// 直接呼叫 FFmpeg 合併影片片段（備用方法）
+    /// </summary>
+    private static async Task MergeWithFFmpegDirectAsync(string tempDir, string? initFile, List<string> segmentFiles, string outputFile)
+    {
         // 建立 concat 檔案列表
         string concatFile = Path.Combine(tempDir, "concat.txt");
         var concatContent = new List<string>();
@@ -443,6 +505,46 @@ public static class FFmpegService
             Console.WriteLine($"FFmpeg 錯誤: {stderr}");
             throw new Exception("FFmpeg 合併失敗");
         }
+    }
+
+    /// <summary>
+    /// 取得 FFmpeg 可執行檔路徑（公開方法）
+    /// </summary>
+    public static string? GetFFmpegExecutablePath()
+    {
+        return GetFFmpegPath();
+    }
+
+    /// <summary>
+    /// 取得 FFmpeg 可執行檔路徑
+    /// </summary>
+    private static string? GetFFmpegPath()
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = OperatingSystem.IsWindows() ? "where" : "which",
+                    Arguments = "ffmpeg",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            
+            if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
+            {
+                return output.Split('\n', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+            }
+        }
+        catch { }
+        return null;
     }
 
     private static string FormatBytes(long bytes)

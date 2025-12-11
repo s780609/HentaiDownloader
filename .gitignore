@@ -315,3 +315,6 @@ tmp/
 # PuppeteerSharp browser downloads
 .local-chromium/
 .local-browsers/
+
+# Downloaded videos
+影片/
