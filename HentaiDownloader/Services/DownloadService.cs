@@ -16,9 +16,20 @@ public static class DownloadService
 
     /// <summary>
     /// 下載影片（自動判斷類型）
+    /// 回傳 true 表示下載成功或已跳過，false 表示失敗
     /// </summary>
-    public static async Task DownloadVideoAsync(string videoUrl, string outputName)
+    public static async Task<bool> DownloadVideoAsync(string videoUrl, string outputName)
     {
+        // 檢查檔案是否已存在
+        string videoDir = AppSettings.OutputPath;
+        string mp4File = Path.Combine(videoDir, $"{outputName}.mp4");
+        
+        if (File.Exists(mp4File))
+        {
+            Console.WriteLine($"⏭️  檔案已存在，跳過下載: {outputName}.mp4");
+            return true;
+        }
+
         if (videoUrl.Contains(".m3u8"))
         {
             // M3U8 需要 FFmpeg
@@ -26,7 +37,7 @@ public static class DownloadService
             {
                 Console.WriteLine("錯誤: 找不到 FFmpeg，請先安裝 FFmpeg 並加入 PATH 環境變數");
                 Console.WriteLine("下載位址: https://ffmpeg.org/download.html");
-                return;
+                return false;
             }
 
             await DownloadM3U8Async(videoUrl, outputName);
@@ -36,6 +47,8 @@ public static class DownloadService
             // 直接下載 MP4/TS 等檔案
             await DownloadDirectFileAsync(videoUrl, outputName);
         }
+
+        return true;
     }
 
     /// <summary>
@@ -66,8 +79,8 @@ public static class DownloadService
             // 解析失敗就用預設 .mp4
         }
 
-        // 使用指定的 影片/ 資料夾
-        string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+        // 使用 appsettings.json 設定的下載路徑
+        string videoDir = AppSettings.OutputPath;
         Directory.CreateDirectory(videoDir); // 確保目錄存在
         string outputFile = Path.Combine(videoDir, $"{outputName}{extension}");
 
@@ -133,7 +146,7 @@ public static class DownloadService
 
             Console.WriteLine("\n正在轉換為 MP4 格式...");
             
-            string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+            string videoDir = AppSettings.OutputPath;
             string outputFile = Path.Combine(videoDir, $"{outputName}.mp4");
 
             // 設定 FFmpeg 路徑
@@ -422,8 +435,8 @@ public static class DownloadService
 
             // 使用 FFmpeg 合併
             Console.WriteLine("正在合併片段並轉換為 MP4...");
-            // 使用指定的 影片/ 資料夾
-            string videoDir = Path.Combine(Directory.GetCurrentDirectory(), "影片");
+            // 使用 appsettings.json 設定的下載路徑
+            string videoDir = AppSettings.OutputPath;
             Directory.CreateDirectory(videoDir); // 確保目錄存在
             string outputFile = Path.Combine(videoDir, $"{outputName}.mp4");
 
