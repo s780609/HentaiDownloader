@@ -9,6 +9,9 @@ namespace VideoPlayer.Services;
 public class ThumbnailService
 {
     private readonly string _thumbnailCacheFolder;
+    private const double DefaultCapturePercentage = 0.1; // 10% of video duration
+    private const int MaxCaptureTimeSeconds = 5;
+    private const int FallbackCaptureTimeSeconds = 1;
 
     public ThumbnailService()
     {
@@ -36,10 +39,10 @@ public class ThumbnailService
                 return thumbnailPath;
             }
 
-            // Generate thumbnail at 10% of video duration or 5 seconds
+            // Generate thumbnail at configurable percentage of video duration or max time
             var captureTime = videoItem.Duration.TotalSeconds > 0 
-                ? TimeSpan.FromSeconds(Math.Min(videoItem.Duration.TotalSeconds * 0.1, 5))
-                : TimeSpan.FromSeconds(1);
+                ? TimeSpan.FromSeconds(Math.Min(videoItem.Duration.TotalSeconds * DefaultCapturePercentage, MaxCaptureTimeSeconds))
+                : TimeSpan.FromSeconds(FallbackCaptureTimeSeconds);
 
             await FFMpeg.SnapshotAsync(
                 videoItem.FilePath,
@@ -49,19 +52,23 @@ public class ThumbnailService
 
             return thumbnailPath;
         }
-        catch
+        catch (Exception ex) when (ex is FFMpegCore.Exceptions.FFMpegException or IOException or UnauthorizedAccessException)
         {
-            // Return null if thumbnail generation fails
+            // Return null if thumbnail generation fails due to known exceptions
             return null;
         }
     }
 
     /// <summary>
-    /// Generates a simple hash for the file path
+    /// Generates a hash for the file path to use as cache key
     /// </summary>
     private string GetFileHash(string filePath)
     {
-        return Math.Abs(filePath.GetHashCode()).ToString();
+        // Use a more robust hash to avoid collisions
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(filePath);
+        var hash = sha256.ComputeHash(bytes);
+        return BitConverter.ToString(hash).Replace("-", "").Substring(0, 16);
     }
 
     /// <summary>

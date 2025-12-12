@@ -46,9 +46,9 @@ public class VideoScannerService
 
                         videoItems.Add(videoItem);
                     }
-                    catch
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
                     {
-                        // Skip files that can't be accessed
+                        // Skip files that can't be accessed due to permissions or I/O errors
                         continue;
                     }
                 }
@@ -73,9 +73,9 @@ public class VideoScannerService
             var mediaInfo = await FFMpegCore.FFProbe.AnalyseAsync(videoItem.FilePath);
             videoItem.Duration = mediaInfo.Duration;
         }
-        catch
+        catch (Exception ex) when (ex is FFMpegCore.Exceptions.FFMpegException or IOException or UnauthorizedAccessException)
         {
-            // Set default duration if metadata can't be read
+            // Set default duration if metadata can't be read due to known exceptions
             videoItem.Duration = TimeSpan.Zero;
         }
     }

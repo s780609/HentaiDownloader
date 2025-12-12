@@ -53,9 +53,18 @@ public static class WindowHelper
     {
         if (element.XamlRoot != null)
         {
-            foreach (Window window in Microsoft.UI.Xaml.Window.Current != null 
-                ? new[] { Microsoft.UI.Xaml.Window.Current }
-                : GetOpenWindows())
+            // Try to get the window from XamlRoot
+            // In WinUI 3, each window has its own XamlRoot
+            var windows = new List<Window>();
+            
+            // Check if Window.Current is available (might be null in some scenarios)
+            if (Microsoft.UI.Xaml.Window.Current != null)
+            {
+                windows.Add(Microsoft.UI.Xaml.Window.Current);
+            }
+            
+            // Try to find window by comparing XamlRoot
+            foreach (var window in windows)
             {
                 if (element.XamlRoot == window.Content?.XamlRoot)
                 {
@@ -64,13 +73,6 @@ public static class WindowHelper
             }
         }
         return null;
-    }
-
-    private static IEnumerable<Window> GetOpenWindows()
-    {
-        // In WinUI 3, we need to track windows ourselves
-        // This is a simplified version - in production, implement proper window tracking
-        yield break;
     }
 }
 
