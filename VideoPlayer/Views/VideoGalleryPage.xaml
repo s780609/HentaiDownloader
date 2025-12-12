@@ -1,0 +1,126 @@
+<Page
+    x:Class="VideoPlayer.Views.VideoGalleryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:VideoPlayer.Models"
+    xmlns:local="using:VideoPlayer.Views"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <local:StringToUriConverter x:Key="StringToUriConverter"/>
+        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <local:TimeSpanToVisibilityConverter x:Key="TimeSpanToVisibilityConverter"/>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right">
+            <AppBarButton Icon="Folder" Label="Select Folder" Command="{x:Bind ViewModel.SelectFolderCommand}"/>
+            <AppBarButton Icon="Refresh" Label="Refresh" Command="{x:Bind ViewModel.RefreshCommand}"/>
+            <AppBarButton Icon="Delete" Label="Clear Cache" Command="{x:Bind ViewModel.ClearCacheCommand}"/>
+        </CommandBar>
+
+        <!-- Video Grid -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <GridView x:Name="VideoGridView"
+                     ItemsSource="{x:Bind ViewModel.Videos, Mode=OneWay}"
+                     SelectionMode="Single"
+                     IsItemClickEnabled="True"
+                     ItemClick="VideoGridView_ItemClick"
+                     Padding="16">
+                
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="models:VideoItem">
+                        <Grid Width="320" Height="240" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              CornerRadius="8" Padding="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="180"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Thumbnail -->
+                            <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                   CornerRadius="4" Margin="0,0,0,8">
+                                <Grid>
+                                    <Image x:Name="ThumbnailImage" 
+                                          Stretch="UniformToFill"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center">
+                                        <Image.Source>
+                                            <BitmapImage UriSource="{x:Bind ThumbnailPath, Mode=OneWay, Converter={StaticResource StringToUriConverter}}"/>
+                                        </Image.Source>
+                                    </Image>
+                                    
+                                    <!-- Fallback icon when no thumbnail -->
+                                    <FontIcon Glyph="&#xE714;" FontSize="48" 
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                             Visibility="{x:Bind ThumbnailPath, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                    
+                                    <!-- Duration badge -->
+                                    <Border Background="#99000000" 
+                                           CornerRadius="4"
+                                           Padding="8,4"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Bottom"
+                                           Margin="8"
+                                           Visibility="{x:Bind Duration, Mode=OneWay, Converter={StaticResource TimeSpanToVisibilityConverter}}">
+                                        <TextBlock Text="{x:Bind FormattedDuration, Mode=OneWay}" 
+                                                  Foreground="White"
+                                                  FontSize="12"
+                                                  FontWeight="SemiBold"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Info -->
+                            <StackPanel Grid.Row="1" Spacing="4">
+                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" 
+                                          TextTrimming="CharacterEllipsis"
+                                          FontWeight="SemiBold"
+                                          MaxLines="2"
+                                          TextWrapping="Wrap"/>
+                                <TextBlock Text="{x:Bind FormattedFileSize, Mode=OneWay}"
+                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                          FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" 
+                                      HorizontalAlignment="Left"/>
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+            </GridView>
+        </ScrollViewer>
+
+        <!-- Status Bar -->
+        <Grid Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+              Padding="16,8" BorderThickness="0,1,0,0"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" 
+                      Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                      VerticalAlignment="Center"/>
+            
+            <ProgressRing Grid.Column="1" 
+                         IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                         Width="20" Height="20"
+                         Margin="16,0,0,0"/>
+        </Grid>
+    </Grid>
+</Page>

@@ -5,16 +5,40 @@ VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HentaiDownloader", "HentaiDownloader\HentaiDownloader.csproj", "{ABACD1B4-ABE0-4158-8847-B60565A39B9B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VideoPlayer", "VideoPlayer\VideoPlayer.csproj", "{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|ARM64 = Debug|ARM64
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|ARM64 = Release|ARM64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|x64.Build.0 = Debug|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Debug|ARM64.Build.0 = Debug|Any CPU
 		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|x64.ActiveCfg = Release|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|x64.Build.0 = Release|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{ABACD1B4-ABE0-4158-8847-B60565A39B9B}.Release|ARM64.Build.0 = Release|Any CPU
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Debug|x64.ActiveCfg = Debug|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Debug|x64.Build.0 = Debug|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Debug|ARM64.Build.0 = Debug|ARM64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Release|Any CPU.ActiveCfg = Release|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Release|x64.ActiveCfg = Release|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Release|x64.Build.0 = Release|x64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Release|ARM64.ActiveCfg = Release|ARM64
+		{E8C5D2F1-9B3E-4A1D-8F6C-7E2B1A9D3C4F}.Release|ARM64.Build.0 = Release|ARM64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -318,3 +318,19 @@ tmp/
 
 # Downloaded videos
 影片/
+
+# WinUI specific
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# Windows App SDK
+*.winmd
+Generated Files/
