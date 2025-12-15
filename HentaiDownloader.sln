@@ -5,7 +5,7 @@ VisualStudioVersion = 18.1.11304.174
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HentaiDownloader", "HentaiDownloader\HentaiDownloader.csproj", "{ABACD1B4-ABE0-4158-8847-B60565A39B9B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoPlayer", "VideoPlayer2\VideoPlayer.csproj", "{DD2DC14B-6E1D-48A8-9821-C98CCCD0FE20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoPlayer", "VideoPlayer\VideoPlayer.csproj", "{DD2DC14B-6E1D-48A8-9821-C98CCCD0FE20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
