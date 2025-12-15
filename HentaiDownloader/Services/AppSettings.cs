@@ -12,7 +12,7 @@ public static class AppSettings
     /// <summary>
     /// 下載輸出路徑
     /// </summary>
-    public static string OutputPath { get; private set; } = Directory.GetCurrentDirectory();
+    public static string OutputPath { get; private set; } = Path.Combine(Directory.GetCurrentDirectory(), "影片");
 
     /// <summary>
     /// 初始化設定

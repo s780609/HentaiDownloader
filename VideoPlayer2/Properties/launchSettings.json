@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VideoPlayer (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "VideoPlayer (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
