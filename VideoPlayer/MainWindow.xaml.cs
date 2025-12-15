@@ -17,7 +17,7 @@ using WinRT.Interop;
 namespace VideoPlayer2
 {
     /// <summary>
-    /// ¼v¤ù¼½©ñ¾¹¥Dµøµ¡
+    /// ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ñ¾¹¥Dï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public sealed partial class MainWindow : Window
     {
@@ -25,7 +25,7 @@ namespace VideoPlayer2
         private VideoItem? _currentVideo;
         private int _currentVideoIndex = -1;
 
-        // UI ±±¨î¶µ
+        // UI ï¿½ï¿½ï¿½î¶µ
         private GridView? _videosGridView;
         private ListView? _videosListView;
         private ProgressRing? _loadingProgressRing;
@@ -38,25 +38,58 @@ namespace VideoPlayer2
         private ToggleButton? _listViewToggleButton;
         private MediaPlayerElement? _videoPlayerElement;
         private TextBlock? _currentVideoTitleText;
+        private bool _isInitialized = false;
 
         public MainWindow()
         {
             InitializeComponent();
             
-            // ³]©wµøµ¡¤j¤p
+            // ï¿½]ï¿½wï¿½ï¿½ï¿½ï¿½ï¿½jï¿½p
             var appWindow = this.AppWindow;
             appWindow.Resize(new Windows.Graphics.SizeInt32(1400, 900));
 
-            // ¦b Loaded ¨Æ¥ó¤¤ªì©l¤Æ±±¨î¶µ°Ñ¦Ò
-            if (Content is FrameworkElement rootElement)
+            // ï¿½b Loaded ï¿½Æ¥ó¤¤ªï¿½lï¿½Æ±ï¿½ï¿½î¶µï¿½Ñ¦ï¿½
+            this.Activated += MainWindow_Activated;
+        }
+
+        private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            if (_isInitialized) return;
+            _isInitialized = true;
+
+            InitializeControls();
+
+            var defaultFolder = @"C:\Users\a0204\Documents\H";
+            if (Directory.Exists(defaultFolder))
             {
-                rootElement.Loaded += RootElement_Loaded;
+                   await LoadVideosFromFolderAsync(defaultFolder);
             }
         }
 
-        private void RootElement_Loaded(object sender, RoutedEventArgs e)
+        // èˆŠçš„äº‹ä»¶è™•ç†å™¨ï¼ˆå·²æ£„ç”¨ï¼‰
+        private async void RootElement_Loaded(object sender, RoutedEventArgs e)
         {
             InitializeControls();
+            
+            // è‡ªå‹•è¼‰å…¥é è¨­è³‡æ–™å¤¾
+            var defaultFolder = @"C:\Users\a0204\Documents\H";
+            try
+            {
+                if (Directory.Exists(defaultFolder))
+                {
+                    System.Diagnostics.Debug.WriteLine($"æ­£åœ¨è¼‰å…¥é è¨­è³‡æ–™å¤¾: {defaultFolder}");
+                    await LoadVideosFromFolderAsync(defaultFolder);
+                    System.Diagnostics.Debug.WriteLine($"è¼‰å…¥å®Œæˆï¼Œå½±ç‰‡æ•¸é‡: {_videos.Count}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"é è¨­è³‡æ–™å¤¾ä¸å­˜åœ¨: {defaultFolder}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"è¼‰å…¥é è¨­è³‡æ–™å¤¾å¤±æ•—: {ex.Message}");
+            }
         }
 
         private void InitializeControls()
@@ -76,7 +109,7 @@ namespace VideoPlayer2
                 _videoPlayerElement = root.FindName("VideoPlayerElement") as MediaPlayerElement;
                 _currentVideoTitleText = root.FindName("CurrentVideoTitleText") as TextBlock;
 
-                // ¸j©w¸ê®Æ·½
+                // ï¿½jï¿½wï¿½ï¿½Æ·ï¿½
                 if (_videosGridView != null)
                     _videosGridView.ItemsSource = _videos;
                 if (_videosListView != null)
@@ -85,7 +118,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¿ï¾Ü¸ê®Æ§¨«ö¶sÂIÀ»
+        /// ï¿½ï¿½Ü¸ï¿½Æ§ï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private async void SelectFolderButton_Click(object sender, RoutedEventArgs e)
         {
@@ -93,7 +126,7 @@ namespace VideoPlayer2
             folderPicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
             folderPicker.FileTypeFilter.Add("*");
 
-            // ¨ú±oµøµ¡±±¨î¥N½X
+            // ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½X
             var hwnd = WindowNative.GetWindowHandle(this);
             InitializeWithWindow.Initialize(folderPicker, hwnd);
 
@@ -105,14 +138,14 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ±q¸ê®Æ§¨¸ü¤J¼v¤ù
+        /// ï¿½qï¿½ï¿½Æ§ï¿½ï¿½ï¿½ï¿½Jï¿½vï¿½ï¿½
         /// </summary>
         private async Task LoadVideosFromFolderAsync(string folderPath)
         {
             if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
                 return;
 
-            // Åã¥Ü¸ü¤J¤¤
+            // ï¿½ï¿½Ü¸ï¿½ï¿½Jï¿½ï¿½
             if (_loadingProgressRing != null) _loadingProgressRing.IsActive = true;
             if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Collapsed;
             if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Collapsed;
@@ -124,8 +157,11 @@ namespace VideoPlayer2
 
             try
             {
-                // ·j´M©Ò¦³ MP4 ÀÉ®×¡]¥]§t¤l¸ê®Æ§¨¡^
-                var mp4Files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories);
+                // åœ¨èƒŒæ™¯åŸ·è¡Œç·’æœå°‹æª”æ¡ˆï¼Œé¿å…é˜»å¡ UI
+                var mp4Files = await Task.Run(() => 
+                    Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories));
+
+                System.Diagnostics.Debug.WriteLine($"æ‰¾åˆ° {mp4Files.Length} å€‹ MP4 æª”æ¡ˆ");
 
                 foreach (var filePath in mp4Files)
                 {
@@ -143,26 +179,30 @@ namespace VideoPlayer2
                     _videos.Add(video);
                 }
 
-                // ²§¨B¸ü¤J©Ò¦³ÁY¹Ï
+                System.Diagnostics.Debug.WriteLine($"å·²åŠ å…¥ {_videos.Count} å€‹å½±ç‰‡åˆ°åˆ—è¡¨");
+
+                // éåŒæ­¥è¼‰å…¥æ‰€æœ‰ç¸®åœ–
                 foreach (var video in _videos.ToList())
                 {
                     _ = LoadThumbnailAsync(video);
                 }
 
-                // Åã¥Ü¼v¤ù²M³æ
+                // é¡¯ç¤ºå½±ç‰‡æ¸…å–®
                 if (_videos.Count > 0)
                 {
                     if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Visible;
                     if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Collapsed;
+                    System.Diagnostics.Debug.WriteLine("é¡¯ç¤ºå½±ç‰‡åˆ—è¡¨");
                 }
                 else
                 {
                     if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Visible;
+                    System.Diagnostics.Debug.WriteLine("é¡¯ç¤ºç©ºç™½é¢æ¿ï¼ˆç„¡å½±ç‰‡ï¼‰");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"¸ü¤J¼v¤ù¥¢±Ñ: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"è¼‰å…¥å½±ç‰‡å¤±æ•—: {ex.Message}\n{ex.StackTrace}");
                 if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Visible;
             }
             finally
@@ -172,7 +212,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¸ü¤J¼v¤ùÁY¹Ï
+        /// ï¿½ï¿½ï¿½Jï¿½vï¿½ï¿½ï¿½Yï¿½ï¿½
         /// </summary>
         private async Task LoadThumbnailAsync(VideoItem video)
         {
@@ -187,7 +227,7 @@ namespace VideoPlayer2
                     await bitmapImage.SetSourceAsync(thumbnail);
                     video.Thumbnail = bitmapImage;
 
-                    // ­«·s¾ã²z²M³æ¶µ¥Ø¥H§ó·s UI
+                    // ï¿½ï¿½ï¿½sï¿½ï¿½zï¿½Mï¿½æ¶µï¿½Ø¥Hï¿½ï¿½s UI
                     var index = _videos.IndexOf(video);
                     if (index >= 0)
                     {
@@ -198,12 +238,12 @@ namespace VideoPlayer2
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"¸ü¤JÁY¹Ï¥¢±Ñ: {video.FileName} - {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ï¿½ï¿½ï¿½Jï¿½Yï¿½Ï¥ï¿½ï¿½ï¿½: {video.FileName} - {ex.Message}");
             }
         }
 
         /// <summary>
-        /// ®æ¦¡¤ÆÀÉ®×¤j¤p
+        /// ï¿½æ¦¡ï¿½ï¿½ï¿½É®×¤jï¿½p
         /// </summary>
         private static string FormatFileSize(long bytes)
         {
@@ -221,7 +261,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ®æ¤lÀËµø«ö¶sÂIÀ»
+        /// ï¿½ï¿½lï¿½Ëµï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private void GridViewButton_Click(object sender, RoutedEventArgs e)
         {
@@ -232,7 +272,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¦CªíÀËµø«ö¶sÂIÀ»
+        /// ï¿½Cï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private void ListViewButton_Click(object sender, RoutedEventArgs e)
         {
@@ -243,7 +283,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¼v¤ù¶µ¥ØÂIÀ»
+        /// ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½
         /// </summary>
         private async void VideoItem_Click(object sender, ItemClickEventArgs e)
         {
@@ -254,7 +294,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¼½©ñ¼v¤ù
+        /// ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½
         /// </summary>
         private async Task PlayVideoAsync(VideoItem video)
         {
@@ -270,20 +310,20 @@ namespace VideoPlayer2
                 if (_currentVideoTitleText != null)
                     _currentVideoTitleText.Text = video.Title;
 
-                // ¤Á´«¨ì¼½©ñ¾¹ÀËµø
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ì¼½ï¿½ï¿½ï¿½Ëµï¿½
                 if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Collapsed;
                 if (_playerContainer != null) _playerContainer.Visibility = Visibility.Visible;
                 if (_backButton != null) _backButton.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"¼½©ñ¼v¤ù¥¢±Ñ: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {ex.Message}");
 
                 var dialog = new ContentDialog
                 {
-                    Title = "¼½©ñ¥¢±Ñ",
-                    Content = $"µLªk¼½©ñ¼v¤ù: {ex.Message}",
-                    CloseButtonText = "½T©w",
+                    Title = "ï¿½ï¿½ï¿½ñ¥¢±ï¿½",
+                    Content = $"ï¿½Lï¿½kï¿½ï¿½ï¿½ï¿½vï¿½ï¿½: {ex.Message}",
+                    CloseButtonText = "ï¿½Tï¿½w",
                     XamlRoot = this.Content.XamlRoot
                 };
                 await dialog.ShowAsync();
@@ -291,22 +331,22 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ªğ¦^²M³æ«ö¶sÂIÀ»
+        /// ï¿½ï¿½^ï¿½Mï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private void BackToListButton_Click(object sender, RoutedEventArgs e)
         {
-            // °±¤î¼½©ñ
+            // ï¿½ï¿½ï¿½î¼½ï¿½ï¿½
             if (_videoPlayerElement != null)
                 _videoPlayerElement.Source = null;
 
-            // ¤Á´«¦^²M³æÀËµø
+            // ï¿½ï¿½ï¿½ï¿½ï¿½^ï¿½Mï¿½ï¿½ï¿½Ëµï¿½
             if (_playerContainer != null) _playerContainer.Visibility = Visibility.Collapsed;
             if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Visible;
             if (_backButton != null) _backButton.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>
-        /// ¤W¤@­Ó¼v¤ù«ö¶sÂIÀ»
+        /// ï¿½Wï¿½@ï¿½Ó¼vï¿½ï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private async void PreviousVideoButton_Click(object sender, RoutedEventArgs e)
         {
@@ -322,7 +362,7 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ¤U¤@­Ó¼v¤ù«ö¶sÂIÀ»
+        /// ï¿½Uï¿½@ï¿½Ó¼vï¿½ï¿½ï¿½ï¿½ï¿½sï¿½Iï¿½ï¿½
         /// </summary>
         private async void NextVideoButton_Click(object sender, RoutedEventArgs e)
         {

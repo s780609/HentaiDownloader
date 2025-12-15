@@ -28,6 +28,13 @@ namespace VideoPlayer2
     {
         private Window? _window;
 
+        // SingleFile 發布需要設定此環境變數
+        [System.Runtime.CompilerServices.ModuleInitializer]
+        internal static void SetBaseDirectory()
+        {
+            Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
+        }
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
