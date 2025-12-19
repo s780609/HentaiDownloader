@@ -334,3 +334,6 @@ _pkginfo.txt
 # Windows App SDK
 *.winmd
 Generated Files/
+
+# Backup files
+*.bak
