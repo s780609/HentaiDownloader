@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="VideoPlayer2.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VideoPlayer2"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="媒體管理器">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <NavigationView x:Name="NavView"
+                    IsBackButtonVisible="Collapsed"
+                    IsSettingsVisible="False"
+                    PaneDisplayMode="Left"
+                    SelectionChanged="NavView_SelectionChanged">
+        <NavigationView.MenuItems>
+            <NavigationViewItem Icon="Video" Content="影片管理" Tag="Videos"/>
+            <NavigationViewItem Icon="Pictures" Content="照片管理" Tag="Photos"/>
+        </NavigationView.MenuItems>
+
+        <Frame x:Name="ContentFrame"/>
+    </NavigationView>
+
+        <!-- 頂部工具列 -->
+        <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 選擇資料夾按鈕 -->
+            <Button Grid.Column="0" Click="SelectFolderButton_Click" Style="{StaticResource AccentButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE838;" FontSize="16"/>
+                    <TextBlock Text="選擇資料夾"/>
+                </StackPanel>
+            </Button>
+
+            <!-- 目前路徑顯示 -->
+            <TextBlock Grid.Column="1" x:Name="CurrentPathTextBlock" 
+                       VerticalAlignment="Center" Margin="16,0"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <!-- 檢視模式切換 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0">
+                <ToggleButton x:Name="GridViewToggleButton" 
+                             Click="GridViewButton_Click"
+                             IsChecked="True"
+                             ToolTipService.ToolTip="格子檢視">
+                    <FontIcon Glyph="&#xF0E2;" FontSize="16"/>
+                </ToggleButton>
+                <ToggleButton x:Name="ListViewToggleButton"
+                             Click="ListViewButton_Click"
+                             ToolTipService.ToolTip="列表檢視">
+                    <FontIcon Glyph="&#xE8FD;" FontSize="16"/>
+                </ToggleButton>
+            </StackPanel>
+
+            <!-- 返回清單按鈕 -->
+            <Button Grid.Column="3" x:Name="BackButton" Click="BackToListButton_Click"
+                    Visibility="Collapsed" Margin="8,0,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE72B;" FontSize="16"/>
+                    <TextBlock Text="返回清單"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- 主要內容區域 -->
+        <Grid Grid.Row="1">
+            <!-- 載入中指示器 -->
+            <ProgressRing x:Name="LoadingProgressRing" IsActive="False" 
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Width="60" Height="60"/>
+
+            <!-- 空狀態提示 -->
+            <StackPanel x:Name="EmptyPanel" 
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Spacing="16">
+                <FontIcon Glyph="&#xE8B7;" FontSize="64" 
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="請選擇包含 MP4 影片的資料夾" 
+                           FontSize="18"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <!-- 影片清單區域 -->
+            <Grid x:Name="VideoListContainer" Visibility="Collapsed">
+                <!-- 格子檢視 -->
+                <GridView x:Name="VideosGridView" 
+                          Visibility="Visible"
+                          Padding="16"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          ItemClick="VideoItem_Click">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="280" Height="220" 
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  CornerRadius="8"
+                                  Padding="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="160"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 縮圖 -->
+                                <Grid Grid.Row="0" CornerRadius="8,8,0,0">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                            Visibility="{Binding Thumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                        <FontIcon Glyph="&#xE714;" FontSize="48" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Border>
+                                    <!-- 播放圖示覆蓋 -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            CornerRadius="24" Padding="12">
+                                        <FontIcon Glyph="&#xE768;" FontSize="24" Foreground="White"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- 影片資訊 -->
+                                <StackPanel Grid.Row="1" Padding="12,8" Spacing="2">
+                                    <TextBlock Text="{Binding Title}" 
+                                               FontWeight="SemiBold"
+                                               MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                        <Run Text="{Binding FileSize}"/>
+                                        <Run Text=" • "/>
+                                        <Run Text="{Binding FolderName}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+
+                <!-- 列表檢視 -->
+                <ListView x:Name="VideosListView" 
+                          Visibility="Collapsed"
+                          Padding="16"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          ItemClick="VideoItem_Click">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="72" Padding="8,4" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 縮圖 -->
+                                <Grid Grid.Column="0" CornerRadius="4">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                            Visibility="{Binding Thumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                        <FontIcon Glyph="&#xE714;" FontSize="24" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- 影片資訊 -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                    <TextBlock Text="{Binding Title}" 
+                                               FontWeight="SemiBold" FontSize="14"
+                                               MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding FolderName}" 
+                                               FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <!-- 檔案資訊 -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" 
+                                            HorizontalAlignment="Right" Spacing="4">
+                                    <TextBlock Text="{Binding FileSize}" 
+                                               FontSize="12" HorizontalAlignment="Right"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding ModifiedDateString}" 
+                                               FontSize="12" HorizontalAlignment="Right"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <!-- 影片播放器區域 -->
+            <Grid x:Name="PlayerContainer" Visibility="Collapsed" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 影片播放器 -->
+                <MediaPlayerElement x:Name="VideoPlayerElement" 
+                                    Grid.Row="0"
+                                    AreTransportControlsEnabled="True"
+                                    AutoPlay="True"
+                                    Stretch="Uniform">
+                    <MediaPlayerElement.TransportControls>
+                        <MediaTransportControls IsCompact="False"
+                                                IsZoomButtonVisible="True"
+                                                IsZoomEnabled="True"
+                                                IsPlaybackRateButtonVisible="True"
+                                                IsPlaybackRateEnabled="True"
+                                                IsVolumeButtonVisible="True"
+                                                IsVolumeEnabled="True"/>
+                    </MediaPlayerElement.TransportControls>
+                </MediaPlayerElement>
+
+                <!-- 影片標題 -->
+                <Border Grid.Row="1" Padding="16,12" 
+                        Background="{ThemeResource LayerFillColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock x:Name="CurrentVideoTitleText" Grid.Column="0"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <Button Grid.Column="1" Click="PreviousVideoButton_Click" 
+                                Margin="8,0" ToolTipService.ToolTip="上一個">
+                            <FontIcon Glyph="&#xE892;" FontSize="16"/>
+                        </Button>
+
+                        <Button Grid.Column="2" Click="NextVideoButton_Click"
+                                ToolTipService.ToolTip="下一個">
+                            <FontIcon Glyph="&#xE893;" FontSize="16"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

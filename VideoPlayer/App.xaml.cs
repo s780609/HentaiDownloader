@@ -28,6 +28,11 @@ namespace VideoPlayer2
     {
         private Window? _window;
 
+        /// <summary>
+        /// 取得主視窗實例
+        /// </summary>
+        public static Window MainWindow { get; private set; } = null!;
+
         // SingleFile 發布需要設定此環境變數
         [System.Runtime.CompilerServices.ModuleInitializer]
         internal static void SetBaseDirectory()
@@ -51,6 +56,7 @@ namespace VideoPlayer2
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             _window = new MainWindow();
+            MainWindow = _window;
             _window.Activate();
         }
     }
