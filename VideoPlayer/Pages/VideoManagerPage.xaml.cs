@@ -6,7 +6,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using VideoPlayer2.Helpers;
 using VideoPlayer2.Models;
+using VideoPlayer2.Services;
 using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
@@ -21,12 +23,15 @@ namespace VideoPlayer2.Pages
     public sealed partial class VideoManagerPage : Page
     {
         private readonly ObservableCollection<VideoItem> _videos = new();
+        private readonly ConfigurationService _configService;
         private VideoItem? _currentVideo;
         private int _currentVideoIndex = -1;
 
         public VideoManagerPage()
         {
             this.InitializeComponent();
+
+            _configService = new ConfigurationService();
 
             // 綁定資料源
             VideosGridView.ItemsSource = _videos;
@@ -38,7 +43,9 @@ namespace VideoPlayer2.Pages
 
         private async void VideoManagerPage_Loaded(object sender, RoutedEventArgs e)
         {
-            var defaultFolder = @"C:\Users\a0204\Documents\H";
+            // 從配置讀取影片路徑
+            var defaultFolder = _configService.GetVideoPath();
+
             if (Directory.Exists(defaultFolder))
             {
                 await LoadVideosFromFolderAsync(defaultFolder);
@@ -100,7 +107,7 @@ namespace VideoPlayer2.Pages
                         FilePath = filePath,
                         FileName = fileInfo.Name,
                         Title = Path.GetFileNameWithoutExtension(filePath),
-                        FileSize = FormatFileSize(fileInfo.Length),
+                        FileSize = FileHelper.FormatFileSize(fileInfo.Length),
                         ModifiedDate = fileInfo.LastWriteTime,
                         FolderName = fileInfo.Directory?.Name ?? string.Empty
                     };
@@ -165,24 +172,6 @@ namespace VideoPlayer2.Pages
             {
                 System.Diagnostics.Debug.WriteLine($"載入縮圖失敗: {video.FileName} - {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// 格式化檔案大小
-        /// </summary>
-        private static string FormatFileSize(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            int order = 0;
-            double size = bytes;
-
-            while (size >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                size /= 1024;
-            }
-
-            return $"{size:0.##} {sizes[order]}";
         }
 
         /// <summary>

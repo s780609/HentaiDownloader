@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace VideoPlayer2.Models;
@@ -6,8 +8,13 @@ namespace VideoPlayer2.Models;
 /// <summary>
 /// 照片資料模型
 /// </summary>
-public class PhotoItem
+public class PhotoItem : INotifyPropertyChanged
 {
+    private BitmapImage? _thumbnail;
+    private int _width;
+    private int _height;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
     /// <summary>
     /// 照片檔案完整路徑
     /// </summary>
@@ -41,7 +48,18 @@ public class PhotoItem
     /// <summary>
     /// 縮圖
     /// </summary>
-    public BitmapImage? Thumbnail { get; set; }
+    public BitmapImage? Thumbnail
+    {
+        get => _thumbnail;
+        set
+        {
+            if (_thumbnail != value)
+            {
+                _thumbnail = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// 所在資料夾名稱
@@ -51,15 +69,44 @@ public class PhotoItem
     /// <summary>
     /// 圖片寬度（像素）
     /// </summary>
-    public int Width { get; set; }
+    public int Width
+    {
+        get => _width;
+        set
+        {
+            if (_width != value)
+            {
+                _width = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(DimensionsText));
+            }
+        }
+    }
 
     /// <summary>
     /// 圖片高度（像素）
     /// </summary>
-    public int Height { get; set; }
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(DimensionsText));
+            }
+        }
+    }
 
     /// <summary>
     /// 圖片尺寸顯示文字
     /// </summary>
     public string DimensionsText => Width > 0 && Height > 0 ? $"{Width}×{Height}" : string.Empty;
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

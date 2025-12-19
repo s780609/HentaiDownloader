@@ -129,15 +129,8 @@ public class PhotoManagerViewModel : INotifyPropertyChanged
     /// </summary>
     private async Task LoadThumbnailForPhotoAsync(PhotoItem photo)
     {
+        // PhotoItem 實作 INotifyPropertyChanged，屬性變更會自動更新 UI
         await _thumbnailService.LoadThumbnailAsync(photo);
-
-        // 觸發 UI 更新
-        var index = Photos.IndexOf(photo);
-        if (index >= 0)
-        {
-            Photos.RemoveAt(index);
-            Photos.Insert(index, photo);
-        }
     }
 
     /// <summary>

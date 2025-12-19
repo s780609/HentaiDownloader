@@ -22,11 +22,29 @@ public class ConfigurationService
     }
 
     /// <summary>
-    /// 取得照片路徑
+    /// 取得照片路徑（如果未配置，返回使用者的圖片資料夾）
     /// </summary>
     public string GetPhotoPath()
     {
-        return _configuration["PhotoSettings:PhotoPath"] ?? "C:\\Photos";
+        var path = _configuration["PhotoSettings:PhotoPath"];
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        }
+        return path;
+    }
+
+    /// <summary>
+    /// 取得影片路徑（如果未配置，返回使用者的影片資料夾）
+    /// </summary>
+    public string GetVideoPath()
+    {
+        var path = _configuration["VideoSettings:VideoPath"];
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+        }
+        return path;
     }
 
     /// <summary>

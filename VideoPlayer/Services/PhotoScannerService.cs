@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using VideoPlayer2.Helpers;
 using VideoPlayer2.Models;
 
 namespace VideoPlayer2.Services;
@@ -56,7 +57,7 @@ public class PhotoScannerService
                         FilePath = filePath,
                         FileName = fileInfo.Name,
                         Title = Path.GetFileNameWithoutExtension(filePath),
-                        FileSize = FormatFileSize(fileInfo.Length),
+                        FileSize = FileHelper.FormatFileSize(fileInfo.Length),
                         ModifiedDate = fileInfo.LastWriteTime,
                         FolderName = fileInfo.Directory?.Name ?? string.Empty
                     };
@@ -75,23 +76,5 @@ public class PhotoScannerService
         }
 
         return photos;
-    }
-
-    /// <summary>
-    /// 格式化檔案大小
-    /// </summary>
-    private static string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-        int order = 0;
-        double size = bytes;
-
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {sizes[order]}";
     }
 }

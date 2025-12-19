@@ -139,15 +139,8 @@ namespace VideoPlayer2.Pages
         /// </summary>
         private async Task LoadThumbnailForPhotoAsync(PhotoItem photo)
         {
+            // PhotoItem 實作 INotifyPropertyChanged，屬性變更會自動更新 UI
             await _thumbnailService.LoadThumbnailAsync(photo);
-
-            // 觸發 UI 更新
-            var index = _photos.IndexOf(photo);
-            if (index >= 0)
-            {
-                _photos.RemoveAt(index);
-                _photos.Insert(index, photo);
-            }
         }
 
         /// <summary>
