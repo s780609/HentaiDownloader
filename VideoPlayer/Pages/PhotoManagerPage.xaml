@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="VideoPlayer2.Pages.PhotoManagerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VideoPlayer2.Pages"
+    xmlns:converters="using:VideoPlayer2.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 頂部工具列 -->
+        <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 選擇資料夾按鈕 -->
+            <Button Grid.Column="0" Click="SelectFolderButton_Click" Style="{StaticResource AccentButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE838;" FontSize="16"/>
+                    <TextBlock Text="選擇資料夾"/>
+                </StackPanel>
+            </Button>
+
+            <!-- 目前路徑顯示 -->
+            <TextBlock Grid.Column="1" x:Name="CurrentPathTextBlock" 
+                       VerticalAlignment="Center" Margin="16,0"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <!-- 照片數量顯示 -->
+            <TextBlock Grid.Column="2" x:Name="PhotoCountTextBlock"
+                       VerticalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Grid>
+
+        <!-- 主要內容區域 -->
+        <Grid Grid.Row="1">
+            <!-- 載入中指示器 -->
+            <ProgressRing x:Name="LoadingProgressRing" IsActive="False" 
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Width="60" Height="60"/>
+
+            <!-- 空狀態提示 -->
+            <StackPanel x:Name="EmptyPanel" 
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Spacing="16">
+                <FontIcon Glyph="&#xEB9F;" FontSize="64" 
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="請選擇包含照片的資料夾" 
+                           FontSize="18"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <!-- 照片網格區域 -->
+            <ScrollViewer x:Name="PhotoScrollViewer" Visibility="Collapsed" 
+                          VerticalScrollBarVisibility="Auto">
+                <GridView x:Name="PhotosGridView" 
+                          Padding="16"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          ItemClick="PhotoItem_Click">
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                    
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="280" Height="280" 
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  CornerRadius="8"
+                                  Padding="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="220"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 照片縮圖 -->
+                                <Grid Grid.Row="0" CornerRadius="8,8,0,0" Margin="8,8,8,0">
+                                    <Border CornerRadius="4" ClipToBounds="True">
+                                        <Image Source="{Binding Thumbnail}" 
+                                               Stretch="UniformToFill"/>
+                                    </Border>
+                                    
+                                    <!-- 載入佔位符 -->
+                                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                            CornerRadius="4"
+                                            Visibility="{Binding Thumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                        <FontIcon Glyph="&#xEB9F;" FontSize="48" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- 照片資訊 -->
+                                <StackPanel Grid.Row="1" Padding="12,4,12,8" Spacing="2">
+                                    <TextBlock Text="{Binding Title}" 
+                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               MaxLines="1" 
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                        <Run Text="{Binding DimensionsText}"/>
+                                        <Run Text=" • " Visibility="{Binding DimensionsText, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <Run Text="{Binding FileSize}"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <!-- 懸停效果 -->
+                                <Grid.Shadow>
+                                    <ThemeShadow />
+                                </Grid.Shadow>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="Margin" Value="8"/>
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                </GridView>
+            </ScrollViewer>
+
+            <!-- 照片預覽區域 -->
+            <Grid x:Name="PhotoPreviewContainer" Visibility="Collapsed" 
+                  Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 頂部工具列 -->
+                <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                    <Button Click="ClosePreviewButton_Click" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72B;" FontSize="16"/>
+                            <TextBlock Text="返回"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- 照片顯示 -->
+                <ScrollViewer Grid.Row="1" 
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              ZoomMode="Enabled"
+                              MinZoomFactor="0.5"
+                              MaxZoomFactor="5">
+                    <Image x:Name="PreviewImage" 
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                </ScrollViewer>
+
+                <!-- 底部資訊列 -->
+                <Border Grid.Row="2" Padding="16,12" 
+                        Background="{ThemeResource LayerFillColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock x:Name="PreviewTitleText" 
+                                       FontSize="16" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="PreviewInfoText" 
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Click="PreviousPhotoButton_Click" 
+                                Margin="8,0" ToolTipService.ToolTip="上一張">
+                            <FontIcon Glyph="&#xE892;" FontSize="16"/>
+                        </Button>
+
+                        <Button Grid.Column="2" Click="NextPhotoButton_Click"
+                                ToolTipService.ToolTip="下一張">
+                            <FontIcon Glyph="&#xE893;" FontSize="16"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>
