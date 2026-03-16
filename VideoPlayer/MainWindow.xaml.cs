@@ -29,6 +29,7 @@ namespace VideoPlayer2
         private int _currentVideoIndex = -1;
         private bool _sortByDateDescending = true;
         private string _searchText = string.Empty;
+        private const double SimilarityThreshold = 0.99;
 
         // UI 參考
         private GridView? _videosGridView;
@@ -279,28 +280,28 @@ namespace VideoPlayer2
             _videoGroups.Clear();
 
             var videoList = _videos.ToList();
-            var assigned = new HashSet<int>();
+            var assignedVideoIndices = new HashSet<int>();
 
             for (int i = 0; i < videoList.Count; i++)
             {
-                if (assigned.Contains(i)) continue;
+                if (assignedVideoIndices.Contains(i)) continue;
 
                 var group = new VideoGroup
                 {
                     GroupTitle = videoList[i].Title
                 };
                 group.Videos.Add(videoList[i]);
-                assigned.Add(i);
+                assignedVideoIndices.Add(i);
 
                 for (int j = i + 1; j < videoList.Count; j++)
                 {
-                    if (assigned.Contains(j)) continue;
+                    if (assignedVideoIndices.Contains(j)) continue;
 
                     double similarity = CalculateSimilarity(videoList[i].Title, videoList[j].Title);
-                    if (similarity >= 0.99)
+                    if (similarity >= SimilarityThreshold)
                     {
                         group.Videos.Add(videoList[j]);
-                        assigned.Add(j);
+                        assignedVideoIndices.Add(j);
                     }
                 }
 
@@ -456,16 +457,13 @@ namespace VideoPlayer2
                     }
 
                     // 同時更新群組中的顯示
-                    foreach (var group in _videoGroups)
+                    for (int gIdx = 0; gIdx < _videoGroups.Count; gIdx++)
                     {
-                        if (group.RepresentativeVideo == video)
+                        if (_videoGroups[gIdx].RepresentativeVideo == video)
                         {
-                            var gIdx = _videoGroups.IndexOf(group);
-                            if (gIdx >= 0)
-                            {
-                                _videoGroups.RemoveAt(gIdx);
-                                _videoGroups.Insert(gIdx, group);
-                            }
+                            var group = _videoGroups[gIdx];
+                            _videoGroups.RemoveAt(gIdx);
+                            _videoGroups.Insert(gIdx, group);
                             break;
                         }
                     }
