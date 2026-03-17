@@ -28,7 +28,9 @@
         <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -41,14 +43,31 @@
                 </StackPanel>
             </Button>
 
+            <!-- 搜尋框 -->
+            <TextBox x:Name="SearchTextBox" Grid.Column="1" 
+                     PlaceholderText="搜尋影片..." 
+                     Width="250" Margin="12,0,0,0"
+                     TextChanged="SearchTextBox_TextChanged"
+                     VerticalAlignment="Center">
+            </TextBox>
+
             <!-- 目前路徑顯示 -->
-            <TextBlock Grid.Column="1" x:Name="CurrentPathTextBlock" 
+            <TextBlock Grid.Column="2" x:Name="CurrentPathTextBlock" 
                        VerticalAlignment="Center" Margin="16,0"
                        TextTrimming="CharacterEllipsis"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
+            <!-- 排序按鈕 -->
+            <Button x:Name="SortButton" Grid.Column="3" Click="SortButton_Click"
+                    ToolTipService.ToolTip="按時間排序" Margin="4,0">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon x:Name="SortIcon" Glyph="&#xE74B;" FontSize="16"/>
+                    <TextBlock Text="時間排序"/>
+                </StackPanel>
+            </Button>
+
             <!-- 檢視模式切換 -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0">
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" Margin="8,0">
                 <ToggleButton x:Name="GridViewToggleButton" 
                              Click="GridViewButton_Click"
                              IsChecked="True"
@@ -63,7 +82,7 @@
             </StackPanel>
 
             <!-- 返回清單按鈕 -->
-            <Button Grid.Column="3" x:Name="BackButton" Click="BackToListButton_Click"
+            <Button Grid.Column="5" x:Name="BackButton" Click="BackToListButton_Click"
                     Visibility="Collapsed" Margin="8,0,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xE72B;" FontSize="16"/>
@@ -195,6 +214,142 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+
+                <!-- 相似影片群組檢視 -->
+                <GridView x:Name="GroupedGridView" 
+                          Visibility="Collapsed"
+                          Padding="16"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          ItemClick="GroupItem_Click">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="280" Height="240" 
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  CornerRadius="8"
+                                  Padding="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="160"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 代表縮圖 -->
+                                <Grid Grid.Row="0" CornerRadius="8,8,0,0">
+                                    <Image Source="{Binding RepresentativeVideo.Thumbnail}" Stretch="UniformToFill"/>
+                                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                            Visibility="{Binding RepresentativeVideo.Thumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                        <FontIcon Glyph="&#xE714;" FontSize="48" 
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Border>
+
+                                    <!-- 群組標記（堆疊效果） -->
+                                    <Border Visibility="{Binding IsGroup, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Background="#CC000000" 
+                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            CornerRadius="0,8,0,8" Padding="10,5">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="14" Foreground="White"/>
+                                            <TextBlock Text="{Binding Count}" Foreground="White" FontWeight="Bold" FontSize="13"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 播放圖示（僅單一影片時顯示） -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            CornerRadius="24" Padding="12">
+                                        <FontIcon Glyph="&#xE768;" FontSize="24" Foreground="White"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- 群組資訊 -->
+                                <StackPanel Grid.Row="1" Padding="12,8" Spacing="2">
+                                    <TextBlock Text="{Binding GroupTitle}" 
+                                               FontWeight="SemiBold"
+                                               MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SubTitle}"
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+
+                <!-- 群組詳情面板（展開群組時顯示） -->
+                <Grid x:Name="GroupDetailPanel" Visibility="Collapsed" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 群組詳情標題列 -->
+                    <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="GroupDetailBackButton" Grid.Column="0" 
+                                Click="GroupDetailBackButton_Click" Margin="0,0,12,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE72B;" FontSize="14"/>
+                                <TextBlock Text="返回"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock x:Name="GroupDetailTitle" Grid.Column="1"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+
+                    <!-- 群組內影片列表 -->
+                    <GridView x:Name="GroupDetailGridView" Grid.Row="1"
+                              Padding="16"
+                              SelectionMode="Single"
+                              IsItemClickEnabled="True"
+                              ItemClick="GroupDetailVideoItem_Click">
+                        <GridView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Width="280" Height="220" 
+                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                      CornerRadius="8"
+                                      Padding="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="160"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0" CornerRadius="8,8,0,0">
+                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                                Visibility="{Binding Thumbnail, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                            <FontIcon Glyph="&#xE714;" FontSize="48" 
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </Border>
+                                        <Border Background="#80000000" 
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                CornerRadius="24" Padding="12">
+                                            <FontIcon Glyph="&#xE768;" FontSize="24" Foreground="White"/>
+                                        </Border>
+                                    </Grid>
+
+                                    <StackPanel Grid.Row="1" Padding="12,8" Spacing="2">
+                                        <TextBlock Text="{Binding Title}" 
+                                                   FontWeight="SemiBold"
+                                                   MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock FontSize="12" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                            <Run Text="{Binding FileSize}"/>
+                                            <Run Text=" • "/>
+                                            <Run Text="{Binding FolderName}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </GridView.ItemTemplate>
+                    </GridView>
+                </Grid>
             </Grid>
 
             <!-- 影片播放器區域 -->
