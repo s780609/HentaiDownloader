@@ -47,8 +47,8 @@ public static class VideoExtractorService
             Console.WriteLine("找不到本機 Chrome，正在下載 Chromium...");
             Console.WriteLine("⚠️  首次執行需要下載約 200MB，請耐心等待...");
             Console.WriteLine();
-            
-            var browserFetcher = new BrowserFetcher();
+
+            var browserFetcher = BrowserHelper.CreateBrowserFetcher();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             
             // 顯示下載進度的動畫

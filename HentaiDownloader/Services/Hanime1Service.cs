@@ -60,8 +60,8 @@ public static class Hanime1Service
             // 使用 PuppeteerSharp 取得頁面內容
             Console.WriteLine("🌐 正在載入頁面...");
 
-            // 確保瀏覽器已下載
-            var browserFetcher = new BrowserFetcher();
+            // 確保瀏覽器已下載（使用明確快取路徑，避免單一檔案發布時找不到瀏覽器）
+            var browserFetcher = BrowserHelper.CreateBrowserFetcher();
             var installedBrowser = browserFetcher.GetInstalledBrowsers().FirstOrDefault();
             if (installedBrowser == null)
             {
