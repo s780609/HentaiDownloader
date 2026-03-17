@@ -538,6 +538,12 @@ public static class VideoExtractorService
             return SelectBestHanimeUrl(urls);
         }
 
+        // jable.tv 專用邏輯
+        if (pageUrl.Contains("jable.tv"))
+        {
+            return SelectBestJableUrl(urls);
+        }
+
         // 其他網站可以在這裡加入特定邏輯
         
         return null; // 返回 null 表示使用預設的選擇邏輯
@@ -583,5 +589,34 @@ public static class VideoExtractorService
 
         // 如果沒有符合的畫質標記，選擇第一個
         return hembedUrls.First();
+    }
+
+    /// <summary>
+    /// 選擇 jable.tv 的最佳影片 URL
+    /// 優先選擇結尾為 {5碼數字}.m3u8 的連結
+    /// </summary>
+    private static string? SelectBestJableUrl(List<string> urls)
+    {
+        // 使用正則表達式匹配結尾為 5 碼數字.m3u8 的 URL
+        // 例如: https://xxx.xxx.com/hls/xxx/55178/55178.m3u8
+        var regex = new System.Text.RegularExpressions.Regex(@"/\d{5}\.m3u8$");
+        
+        var jableUrl = urls.FirstOrDefault(u => regex.IsMatch(u));
+        
+        if (jableUrl != null)
+        {
+            Console.WriteLine($"[jable.tv] 自動選擇: {jableUrl}");
+            return jableUrl;
+        }
+
+        // 備選：任何 m3u8 連結
+        var m3u8Url = urls.FirstOrDefault(u => u.EndsWith(".m3u8"));
+        if (m3u8Url != null)
+        {
+            Console.WriteLine($"[jable.tv] 選擇 m3u8: {m3u8Url}");
+            return m3u8Url;
+        }
+
+        return null;
     }
 }

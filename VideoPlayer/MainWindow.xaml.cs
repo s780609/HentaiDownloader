@@ -8,7 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using VideoPlayer2.Models;
+using VideoPlayer2.Services;
 using Windows.Media.Core;
+using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.Storage.Pickers;
@@ -17,13 +19,15 @@ using WinRT.Interop;
 namespace VideoPlayer2
 {
     /// <summary>
-    /// �v�����񾹥D����
+    /// 影片播放器主視窗
     /// </summary>
     public sealed partial class MainWindow : Window
     {
         private readonly ObservableCollection<VideoItem> _videos = new();
+        private readonly PlaybackLogService _playbackLogService = new();
         private VideoItem? _currentVideo;
         private int _currentVideoIndex = -1;
+        private bool _isSeekingToSavedPosition = false;
 
         // UI ���
         private GridView? _videosGridView;
@@ -58,6 +62,9 @@ namespace VideoPlayer2
             _isInitialized = true;
 
             InitializeControls();
+
+            // 載入播放紀錄
+            await _playbackLogService.LoadAsync();
 
             var defaultFolder = @"C:\Users\a0204\Documents\H";
             if (Directory.Exists(defaultFolder))
@@ -294,36 +301,61 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ����v��
+        /// 播放影片
         /// </summary>
         private async Task PlayVideoAsync(VideoItem video)
         {
             try
             {
+                // 儲存上一個影片的播放位置
+                await SaveCurrentPlaybackPositionAsync();
+
                 _currentVideo = video;
                 _currentVideoIndex = _videos.IndexOf(video);
 
                 var file = await StorageFile.GetFileFromPathAsync(video.FilePath);
                 if (_videoPlayerElement != null)
+                {
                     _videoPlayerElement.Source = MediaSource.CreateFromStorageFile(file);
+
+                    // 取得上次播放位置
+                    var savedPosition = _playbackLogService.GetPlaybackPosition(video.FilePath);
+                    if (savedPosition > 0)
+                    {
+                        _isSeekingToSavedPosition = true;
+                        // 使用 MediaOpened 事件來設定播放位置
+                        if (_videoPlayerElement.MediaPlayer != null)
+                        {
+                            _videoPlayerElement.MediaPlayer.MediaOpened += (s, e) =>
+                            {
+                                if (_isSeekingToSavedPosition && _currentVideo?.FilePath == video.FilePath)
+                                {
+                                    _videoPlayerElement.MediaPlayer.Position = TimeSpan.FromSeconds(savedPosition);
+                                    _isSeekingToSavedPosition = false;
+                                    System.Diagnostics.Debug.WriteLine($"已跳轉到上次播放位置: {savedPosition:F1} 秒");
+                                }
+                            };
+                        }
+                    }
+                }
 
                 if (_currentVideoTitleText != null)
                     _currentVideoTitleText.Text = video.Title;
 
-                // �����켽���˵�
+                // 切換到播放模式
                 if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Collapsed;
                 if (_playerContainer != null) _playerContainer.Visibility = Visibility.Visible;
                 if (_backButton != null) _backButton.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"����v������: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"播放影片失敗: {ex.Message}");
 
                 var dialog = new ContentDialog
                 {
-                    Title = "���񥢱�",
-                    Content = $"�L�k����v��: {ex.Message}",
-                    CloseButtonText = "�T�w",
+                    Title = "播放失敗",
+                    Content = $"無法播放影片: {ex.Message}",
+                    CloseButtonText = "確定",
                     XamlRoot = this.Content.XamlRoot
                 };
                 await dialog.ShowAsync();
@@ -331,15 +363,46 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// ��^�M����s�I��
+        /// 儲存目前影片的播放位置
         /// </summary>
-        private void BackToListButton_Click(object sender, RoutedEventArgs e)
+        private async Task SaveCurrentPlaybackPositionAsync()
         {
-            // �����
+            if (_currentVideo != null && _videoPlayerElement?.MediaPlayer != null)
+            {
+                var position = _videoPlayerElement.MediaPlayer.Position.TotalSeconds;
+                var duration = _videoPlayerElement.MediaPlayer.NaturalDuration.TotalSeconds;
+
+                // 只有在有效位置時才儲存（排除剛開始或已播完的情況）
+                if (position > 1 && position < duration - 1)
+                {
+                    await _playbackLogService.SavePlaybackPositionAsync(_currentVideo.FilePath, position);
+                    System.Diagnostics.Debug.WriteLine($"已儲存播放位置: {_currentVideo.Title} - {position:F1} 秒");
+                }
+                else if (position >= duration - 1)
+                {
+                    // 如果播放完畢，移除紀錄
+                    _playbackLogService.RemovePlaybackPosition(_currentVideo.FilePath);
+                    await _playbackLogService.SaveAsync();
+                    System.Diagnostics.Debug.WriteLine($"影片播放完畢，已移除播放紀錄: {_currentVideo.Title}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 返回清單按鈕點擊
+        /// </summary>
+        private async void BackToListButton_Click(object sender, RoutedEventArgs e)
+        {
+            // 儲存目前播放位置
+            await SaveCurrentPlaybackPositionAsync();
+
+            // 停止播放
             if (_videoPlayerElement != null)
                 _videoPlayerElement.Source = null;
 
-            // �����^�M���˵�
+            _currentVideo = null;
+
+            // 切換回清單模式
             if (_playerContainer != null) _playerContainer.Visibility = Visibility.Collapsed;
             if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Visible;
             if (_backButton != null) _backButton.Visibility = Visibility.Collapsed;

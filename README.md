@@ -118,6 +118,35 @@ HentaiDownloader/
 4. 還原 NuGet 套件：`dotnet restore`
 5. 建置專案：`dotnet build`
 
+## 打包成 EXE
+
+將專案打包成 self-contained 單一 EXE 檔案，可在沒有安裝 .NET 的電腦上直接執行。
+
+### HentaiDownloader
+
+```bash
+cd HentaiDownloader
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "../publish"
+```
+
+### VideoPlayer
+
+```bash
+cd VideoPlayer
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "../publish"
+```
+
+### 輸出結果
+
+打包完成後，EXE 檔案會在 `publish` 資料夾中：
+
+| 檔案 | 說明 |
+|------|------|
+| `HentaiDownloader.exe` | 影片下載器 |
+| `VideoPlayer.exe` | 影片播放器 |
+
+> **注意**: 打包後可刪除 `.pdb` 檔案以減少檔案數量。
+
 ## 授權
 
 此專案尚未指定授權。
