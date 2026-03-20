@@ -1,50 +1,21 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace VideoPlayer2.Models;
 
 /// <summary>
-/// ¼v¤ù¶µ¥Ø¼Ò«¬
+/// å½±ç‰‡é …ç›®æ¨¡åž‹
 /// </summary>
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
 public class VideoItem
 {
-    /// <summary>
-    /// ¼v¤ùÀÉ®×§¹¾ã¸ô®|
-    /// </summary>
     public string FilePath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// ¼v¤ùÀÉ®×¦WºÙ
-    /// </summary>
     public string FileName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// ¼v¤ù¼ÐÃD¡]¤£§t°ÆÀÉ¦W¡^
-    /// </summary>
     public string Title { get; set; } = string.Empty;
-
-    /// <summary>
-    /// ÀÉ®×¤j¤p¡]®æ¦¡¤Æ«á¡^
-    /// </summary>
     public string FileSize { get; set; } = string.Empty;
-
-    /// <summary>
-    /// ÀÉ®×­×§ï®É¶¡
-    /// </summary>
     public DateTime ModifiedDate { get; set; }
-
-    /// <summary>
-    /// ®æ¦¡¤Æªº­×§ï®É¶¡
-    /// </summary>
     public string ModifiedDateString => ModifiedDate.ToString("yyyy/MM/dd HH:mm");
-
-    /// <summary>
-    /// ÁY¹Ï
-    /// </summary>
     public BitmapImage? Thumbnail { get; set; }
-
-    /// <summary>
-    /// ©Ò¦b¸ê®Æ§¨¦WºÙ
-    /// </summary>
     public string FolderName { get; set; } = string.Empty;
 }

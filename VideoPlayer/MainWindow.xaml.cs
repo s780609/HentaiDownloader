@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.FileProperties;
 using Windows.Storage.Pickers;
+using Windows.System;
 using WinRT.Interop;
 
 namespace VideoPlayer2
@@ -22,14 +24,27 @@ namespace VideoPlayer2
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        private readonly ObservableCollection<VideoItem> _videos = new();
+        // 混合顯示集合 (資料夾 + 影片)
+        private readonly ObservableCollection<object> _displayItems = new();
         private readonly ObservableCollection<VideoGroup> _videoGroups = new();
-        private List<VideoItem> _allVideos = new();
+
+        // 當前資料夾中的影片 (用於播放器上下切換)
+        private List<VideoItem> _currentFolderVideos = new();
         private VideoItem? _currentVideo;
         private int _currentVideoIndex = -1;
         private bool _sortByDateDescending = true;
         private string _searchText = string.Empty;
         private const double SimilarityThreshold = 0.99;
+
+        // 資料夾導航狀態
+        private string _rootFolderPath = string.Empty;
+        private string _currentFolderPath = string.Empty;
+
+        // 播放器控制列自動隱藏
+        private DispatcherTimer? _controlsHideTimer;
+        private Button? _hideControlsButton;
+        private static readonly TimeSpan ControlsHideDelay = TimeSpan.FromSeconds(1.5);
+        private static readonly TimeSpan SkipInterval = TimeSpan.FromSeconds(5);
 
         // UI 參考
         private GridView? _videosGridView;
@@ -39,6 +54,7 @@ namespace VideoPlayer2
         private Grid? _videoListContainer;
         private Grid? _playerContainer;
         private Button? _backButton;
+        private Button? _navigateUpButton;
         private TextBlock? _currentPathTextBlock;
         private ToggleButton? _gridViewToggleButton;
         private ToggleButton? _listViewToggleButton;
@@ -57,7 +73,7 @@ namespace VideoPlayer2
         public MainWindow()
         {
             InitializeComponent();
-            
+
             // 設定視窗大小
             var appWindow = this.AppWindow;
             appWindow.Resize(new Windows.Graphics.SizeInt32(1400, 900));
@@ -76,33 +92,8 @@ namespace VideoPlayer2
             var defaultFolder = @"C:\Users\a0204\Documents\H";
             if (Directory.Exists(defaultFolder))
             {
-                   await LoadVideosFromFolderAsync(defaultFolder);
-            }
-        }
-
-        // 舊的事件處理器（已棄用）
-        private async void RootElement_Loaded(object sender, RoutedEventArgs e)
-        {
-            InitializeControls();
-            
-            // 自動載入預設資料夾
-            var defaultFolder = @"C:\Users\a0204\Documents\H";
-            try
-            {
-                if (Directory.Exists(defaultFolder))
-                {
-                    System.Diagnostics.Debug.WriteLine($"正在載入預設資料夾: {defaultFolder}");
-                    await LoadVideosFromFolderAsync(defaultFolder);
-                    System.Diagnostics.Debug.WriteLine($"載入完成，影片數量: {_videos.Count}");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"預設資料夾不存在: {defaultFolder}");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"載入預設資料夾失敗: {ex.Message}");
+                _rootFolderPath = defaultFolder;
+                await NavigateToFolderAsync(defaultFolder);
             }
         }
 
@@ -117,6 +108,7 @@ namespace VideoPlayer2
                 _videoListContainer = root.FindName("VideoListContainer") as Grid;
                 _playerContainer = root.FindName("PlayerContainer") as Grid;
                 _backButton = root.FindName("BackButton") as Button;
+                _navigateUpButton = root.FindName("NavigateUpButton") as Button;
                 _currentPathTextBlock = root.FindName("CurrentPathTextBlock") as TextBlock;
                 _gridViewToggleButton = root.FindName("GridViewToggleButton") as ToggleButton;
                 _listViewToggleButton = root.FindName("ListViewToggleButton") as ToggleButton;
@@ -131,13 +123,18 @@ namespace VideoPlayer2
                 _groupDetailGridView = root.FindName("GroupDetailGridView") as GridView;
                 _groupDetailBackButton = root.FindName("GroupDetailBackButton") as Button;
 
+                _hideControlsButton = root.FindName("HideControlsButton") as Button;
+
                 // 綁定資料源
                 if (_videosGridView != null)
-                    _videosGridView.ItemsSource = _videos;
+                    _videosGridView.ItemsSource = _displayItems;
                 if (_videosListView != null)
-                    _videosListView.ItemsSource = _videos;
+                    _videosListView.ItemsSource = _displayItems;
                 if (_groupedGridView != null)
                     _groupedGridView.ItemsSource = _videoGroups;
+
+                // 設定播放器控制列自動隱藏
+                SetupPlayerControls();
             }
         }
 
@@ -157,17 +154,20 @@ namespace VideoPlayer2
             var folder = await folderPicker.PickSingleFolderAsync();
             if (folder != null)
             {
-                await LoadVideosFromFolderAsync(folder.Path);
+                _rootFolderPath = folder.Path;
+                await NavigateToFolderAsync(folder.Path);
             }
         }
 
         /// <summary>
-        /// 從資料夾載入影片
+        /// 導航到指定資料夾 (只掃描當前層級)
         /// </summary>
-        private async Task LoadVideosFromFolderAsync(string folderPath)
+        private async Task NavigateToFolderAsync(string folderPath)
         {
             if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
                 return;
+
+            _currentFolderPath = folderPath;
 
             // 顯示載入中
             if (_loadingProgressRing != null) _loadingProgressRing.IsActive = true;
@@ -176,19 +176,63 @@ namespace VideoPlayer2
             if (_playerContainer != null) _playerContainer.Visibility = Visibility.Collapsed;
             if (_backButton != null) _backButton.Visibility = Visibility.Collapsed;
 
-            _videos.Clear();
-            _allVideos.Clear();
+            _displayItems.Clear();
+            _currentFolderVideos.Clear();
             _videoGroups.Clear();
+
+            // 更新路徑顯示
             if (_currentPathTextBlock != null) _currentPathTextBlock.Text = folderPath;
+
+            // 更新上一層按鈕可見性
+            UpdateNavigateUpButton();
 
             try
             {
-                // 在背景執行緒搜尋檔案，避免阻塞 UI
-                var mp4Files = await Task.Run(() => 
-                    Directory.GetFiles(folderPath, "*.mp4", SearchOption.AllDirectories));
+                // 在背景執行緒掃描當前資料夾
+                var (subFolders, mp4Files) = await Task.Run(() =>
+                {
+                    var folders = Directory.GetDirectories(folderPath)
+                        .OrderBy(f => Path.GetFileName(f))
+                        .ToArray();
+                    var files = Directory.GetFiles(folderPath, "*.mp4", SearchOption.TopDirectoryOnly);
+                    return (folders, files);
+                });
 
-                System.Diagnostics.Debug.WriteLine($"找到 {mp4Files.Length} 個 MP4 檔案");
+                // 建立資料夾項目
+                var folderItems = new List<FolderItem>();
+                foreach (var subFolder in subFolders)
+                {
+                    var dirInfo = new DirectoryInfo(subFolder);
+                    var folderItem = await Task.Run(() =>
+                    {
+                        int videoCount = 0;
+                        int subFolderCount = 0;
+                        try
+                        {
+                            videoCount = Directory.GetFiles(subFolder, "*.mp4", SearchOption.AllDirectories).Length;
+                            subFolderCount = Directory.GetDirectories(subFolder).Length;
+                        }
+                        catch { }
 
+                        var parts = new List<string>();
+                        if (subFolderCount > 0) parts.Add($"{subFolderCount} 個資料夾");
+                        if (videoCount > 0) parts.Add($"{videoCount} 個影片");
+
+                        return new FolderItem
+                        {
+                            FolderPath = subFolder,
+                            Name = dirInfo.Name,
+                            SubFolderCount = subFolderCount,
+                            VideoCount = videoCount,
+                            ItemCountText = parts.Count > 0 ? string.Join(", ", parts) : "空資料夾"
+                        };
+                    });
+
+                    folderItems.Add(folderItem);
+                }
+
+                // 建立影片項目
+                var videoItems = new List<VideoItem>();
                 foreach (var filePath in mp4Files)
                 {
                     var fileInfo = new FileInfo(filePath);
@@ -201,40 +245,37 @@ namespace VideoPlayer2
                         ModifiedDate = fileInfo.LastWriteTime,
                         FolderName = fileInfo.Directory?.Name ?? string.Empty
                     };
-
-                    _allVideos.Add(video);
+                    videoItems.Add(video);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"已加入 {_allVideos.Count} 個影片到列表");
+                _currentFolderVideos = videoItems;
 
-                // 套用排序與篩選
-                ApplyFilterAndSort();
+                // 套用篩選與排序後加入顯示集合
+                ApplyFilterAndSort(folderItems, videoItems);
 
-                // 建立相似度群組
+                // 建立相似度群組 (僅針對影片)
                 BuildSimilarityGroups();
 
-                // 非同步載入所有縮圖
-                foreach (var video in _allVideos.ToList())
+                // 非同步載入縮圖
+                foreach (var video in videoItems)
                 {
                     _ = LoadThumbnailAsync(video);
                 }
 
-                // 顯示影片清單
-                if (_allVideos.Count > 0)
+                // 顯示結果
+                if (_displayItems.Count > 0)
                 {
                     if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Visible;
                     if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Collapsed;
-                    System.Diagnostics.Debug.WriteLine("顯示影片列表");
                 }
                 else
                 {
                     if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Visible;
-                    System.Diagnostics.Debug.WriteLine("顯示空白面板（無影片）");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"載入影片失敗: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"載入資料夾失敗: {ex.Message}\n{ex.StackTrace}");
                 if (_emptyPanel != null) _emptyPanel.Visibility = Visibility.Visible;
             }
             finally
@@ -244,31 +285,98 @@ namespace VideoPlayer2
         }
 
         /// <summary>
-        /// 套用篩選與排序
+        /// 更新上一層按鈕的可見性
         /// </summary>
-        private void ApplyFilterAndSort()
+        private void UpdateNavigateUpButton()
         {
-            var filtered = _allVideos.AsEnumerable();
+            if (_navigateUpButton == null) return;
+
+            // 不在根目錄時顯示上一層按鈕
+            bool canGoUp = !string.IsNullOrEmpty(_rootFolderPath) &&
+                           !string.IsNullOrEmpty(_currentFolderPath) &&
+                           !string.Equals(_currentFolderPath, _rootFolderPath, StringComparison.OrdinalIgnoreCase);
+
+            _navigateUpButton.Visibility = canGoUp ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// 上一層按鈕點擊
+        /// </summary>
+        private async void NavigateUpButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_currentFolderPath)) return;
+
+            var parentPath = Directory.GetParent(_currentFolderPath)?.FullName;
+            if (parentPath == null) return;
+
+            // 不允許超出根目錄
+            if (!parentPath.StartsWith(_rootFolderPath, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(parentPath, _rootFolderPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            await NavigateToFolderAsync(parentPath);
+        }
+
+        /// <summary>
+        /// 混合項目 (資料夾或影片) 點擊事件
+        /// </summary>
+        private async void MixedItem_Click(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is FolderItem folder)
+            {
+                // 點擊資料夾 → 進入該資料夾
+                await NavigateToFolderAsync(folder.FolderPath);
+            }
+            else if (e.ClickedItem is VideoItem video)
+            {
+                // 點擊影片 → 播放
+                await PlayVideoAsync(video);
+            }
+        }
+
+        /// <summary>
+        /// 套用篩選與排序 (資料夾在前，影片在後)
+        /// </summary>
+        private void ApplyFilterAndSort(List<FolderItem>? folderItems = null, List<VideoItem>? videoItems = null)
+        {
+            // 如果沒傳入，從現有的 displayItems 和 _currentFolderVideos 取得
+            var folders = folderItems ?? _displayItems.OfType<FolderItem>().ToList();
+            var videos = videoItems ?? _currentFolderVideos;
+
+            var filteredFolders = folders.AsEnumerable();
+            var filteredVideos = videos.AsEnumerable();
 
             // 文字搜尋篩選
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
                 var searchLower = _searchText.ToLowerInvariant();
-                filtered = filtered.Where(v =>
+                filteredFolders = filteredFolders.Where(f =>
+                    f.Name.ToLowerInvariant().Contains(searchLower));
+                filteredVideos = filteredVideos.Where(v =>
                     v.Title.ToLowerInvariant().Contains(searchLower) ||
                     v.FileName.ToLowerInvariant().Contains(searchLower) ||
                     v.FolderName.ToLowerInvariant().Contains(searchLower));
             }
 
-            // 按時間排序
-            filtered = _sortByDateDescending
-                ? filtered.OrderByDescending(v => v.ModifiedDate)
-                : filtered.OrderBy(v => v.ModifiedDate);
+            // 影片按時間排序
+            filteredVideos = _sortByDateDescending
+                ? filteredVideos.OrderByDescending(v => v.ModifiedDate)
+                : filteredVideos.OrderBy(v => v.ModifiedDate);
 
-            _videos.Clear();
-            foreach (var video in filtered)
+            _displayItems.Clear();
+
+            // 資料夾排在前面
+            foreach (var folder in filteredFolders)
             {
-                _videos.Add(video);
+                _displayItems.Add(folder);
+            }
+
+            // 影片排在後面
+            foreach (var video in filteredVideos)
+            {
+                _displayItems.Add(video);
             }
         }
 
@@ -279,7 +387,7 @@ namespace VideoPlayer2
         {
             _videoGroups.Clear();
 
-            var videoList = _videos.ToList();
+            var videoList = _displayItems.OfType<VideoItem>().ToList();
             var assignedVideoIndices = new HashSet<int>();
 
             for (int i = 0; i < videoList.Count; i++)
@@ -449,11 +557,11 @@ namespace VideoPlayer2
                     video.Thumbnail = bitmapImage;
 
                     // 重新插入以更新 UI
-                    var index = _videos.IndexOf(video);
+                    var index = _displayItems.IndexOf(video);
                     if (index >= 0)
                     {
-                        _videos.RemoveAt(index);
-                        _videos.Insert(index, video);
+                        _displayItems.RemoveAt(index);
+                        _displayItems.Insert(index, video);
                     }
 
                     // 同時更新群組中的顯示
@@ -515,16 +623,124 @@ namespace VideoPlayer2
             if (_videosListView != null) _videosListView.Visibility = Visibility.Visible;
         }
 
+        #region 播放器控制列與跳轉
+
         /// <summary>
-        /// 影片項目點擊
+        /// 設定播放器控制列行為 (自動隱藏 + 鍵盤快捷鍵)
         /// </summary>
-        private async void VideoItem_Click(object sender, ItemClickEventArgs e)
+        private void SetupPlayerControls()
         {
-            if (e.ClickedItem is VideoItem video)
+            // 自動隱藏計時器
+            _controlsHideTimer = new DispatcherTimer();
+            _controlsHideTimer.Interval = ControlsHideDelay;
+            _controlsHideTimer.Tick += (s, e) =>
             {
-                await PlayVideoAsync(video);
+                _controlsHideTimer.Stop();
+                HideTransportControls();
+            };
+
+            // 監聽滑鼠移動以自動顯示/隱藏控制列
+            if (_playerContainer != null)
+            {
+                _playerContainer.AddHandler(UIElement.PointerMovedEvent,
+                    new PointerEventHandler(PlayerContainer_PointerMoved), true);
+                _playerContainer.AddHandler(UIElement.PointerPressedEvent,
+                    new PointerEventHandler(PlayerContainer_PointerMoved), true);
+            }
+
+            // 全域鍵盤快捷鍵 (左右方向鍵跳 5 秒)
+            if (Content is UIElement rootElement)
+            {
+                rootElement.AddHandler(UIElement.KeyDownEvent,
+                    new KeyEventHandler(Content_KeyDown), true);
             }
         }
+
+        private void PlayerContainer_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            ShowTransportControls();
+            ResetHideTimer();
+        }
+
+        private void ShowTransportControls()
+        {
+            if (_videoPlayerElement?.TransportControls is MediaTransportControls tc)
+            {
+                tc.Show();
+            }
+            if (_hideControlsButton != null)
+                _hideControlsButton.Visibility = Visibility.Visible;
+        }
+
+        private void HideTransportControls()
+        {
+            if (_videoPlayerElement?.TransportControls is MediaTransportControls tc)
+            {
+                tc.Hide();
+            }
+            if (_hideControlsButton != null)
+                _hideControlsButton.Visibility = Visibility.Collapsed;
+        }
+
+        private void ResetHideTimer()
+        {
+            _controlsHideTimer?.Stop();
+            _controlsHideTimer?.Start();
+        }
+
+        private void HideControlsButton_Click(object sender, RoutedEventArgs e)
+        {
+            _controlsHideTimer?.Stop();
+            HideTransportControls();
+        }
+
+        private void Content_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            // 只在播放器可見時處理
+            if (_playerContainer?.Visibility != Visibility.Visible) return;
+
+            // 避免在搜尋框等輸入控件中觸發
+            if (e.OriginalSource is TextBox) return;
+
+            switch (e.Key)
+            {
+                case VirtualKey.Left:
+                    SkipVideo(TimeSpan.FromSeconds(-5));
+                    e.Handled = true;
+                    break;
+                case VirtualKey.Right:
+                    SkipVideo(TimeSpan.FromSeconds(5));
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        private void SkipBackward5s_Click(object sender, RoutedEventArgs e)
+        {
+            SkipVideo(TimeSpan.FromSeconds(-5));
+        }
+
+        private void SkipForward5s_Click(object sender, RoutedEventArgs e)
+        {
+            SkipVideo(TimeSpan.FromSeconds(5));
+        }
+
+        private void SkipVideo(TimeSpan amount)
+        {
+            if (_videoPlayerElement?.MediaPlayer?.PlaybackSession == null) return;
+
+            var session = _videoPlayerElement.MediaPlayer.PlaybackSession;
+            var newPosition = session.Position + amount;
+
+            if (newPosition < TimeSpan.Zero)
+                newPosition = TimeSpan.Zero;
+            else if (newPosition > session.NaturalDuration)
+                newPosition = session.NaturalDuration;
+
+            session.Position = newPosition;
+        }
+
+        #endregion
 
         /// <summary>
         /// 播放影片
@@ -534,7 +750,7 @@ namespace VideoPlayer2
             try
             {
                 _currentVideo = video;
-                _currentVideoIndex = _videos.IndexOf(video);
+                _currentVideoIndex = _currentFolderVideos.IndexOf(video);
 
                 var file = await StorageFile.GetFileFromPathAsync(video.FilePath);
                 if (_videoPlayerElement != null)
@@ -547,6 +763,10 @@ namespace VideoPlayer2
                 if (_videoListContainer != null) _videoListContainer.Visibility = Visibility.Collapsed;
                 if (_playerContainer != null) _playerContainer.Visibility = Visibility.Visible;
                 if (_backButton != null) _backButton.Visibility = Visibility.Visible;
+
+                // 顯示控制列並啟動自動隱藏
+                ShowTransportControls();
+                ResetHideTimer();
             }
             catch (Exception ex)
             {
@@ -583,15 +803,15 @@ namespace VideoPlayer2
         /// </summary>
         private async void PreviousVideoButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_videos.Count == 0) return;
+            if (_currentFolderVideos.Count == 0) return;
 
             _currentVideoIndex--;
             if (_currentVideoIndex < 0)
             {
-                _currentVideoIndex = _videos.Count - 1;
+                _currentVideoIndex = _currentFolderVideos.Count - 1;
             }
 
-            await PlayVideoAsync(_videos[_currentVideoIndex]);
+            await PlayVideoAsync(_currentFolderVideos[_currentVideoIndex]);
         }
 
         /// <summary>
@@ -599,15 +819,34 @@ namespace VideoPlayer2
         /// </summary>
         private async void NextVideoButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_videos.Count == 0) return;
+            if (_currentFolderVideos.Count == 0) return;
 
             _currentVideoIndex++;
-            if (_currentVideoIndex >= _videos.Count)
+            if (_currentVideoIndex >= _currentFolderVideos.Count)
             {
                 _currentVideoIndex = 0;
             }
 
-            await PlayVideoAsync(_videos[_currentVideoIndex]);
+            await PlayVideoAsync(_currentFolderVideos[_currentVideoIndex]);
+        }
+
+        // 舊的事件處理器（保留相容性）
+        private async void RootElement_Loaded(object sender, RoutedEventArgs e)
+        {
+            InitializeControls();
+            var defaultFolder = @"C:\Users\a0204\Documents\H";
+            try
+            {
+                if (Directory.Exists(defaultFolder))
+                {
+                    _rootFolderPath = defaultFolder;
+                    await NavigateToFolderAsync(defaultFolder);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"載入預設資料夾失敗: {ex.Message}");
+            }
         }
     }
 }
