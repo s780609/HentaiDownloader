@@ -62,12 +62,12 @@ public static class ConsoleService
 
     /// <summary>
     /// 讀取一行輸入 (支援 Unicode)
+    /// .NET 的 Console.ReadLine() 在 Windows 上使用 ReadConsoleW 直接讀取 UTF-16，
+    /// 能正確處理日文等多位元組字元，不需要透過 code page 轉換。
     /// </summary>
     public static string? ReadLineUnicode()
     {
-        // 使用 StreamReader 直接從標準輸入讀取，確保 UTF-8 編碼
-        using var reader = new StreamReader(Console.OpenStandardInput(), Encoding.UTF8);
-        return reader.ReadLine();
+        return Console.ReadLine();
     }
 
     /// <summary>

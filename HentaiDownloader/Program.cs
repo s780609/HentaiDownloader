@@ -97,8 +97,8 @@ class Program
     {
         // 輸入搜尋關鍵字 (可選)
         Console.WriteLine();
-        Console.Write("請輸入搜尋關鍵字 (直接按 Enter 跳過): ");
-        string? query = Console.ReadLine()?.Trim();
+        Console.Write("請輸入搜尋關鍵字 (直接按 Enter 跳過，支援日文): ");
+        string? query = ConsoleService.ReadLineUnicode()?.Trim();
 
         // 選擇年月 (預設為上個月，如果有輸入 query 則可選擇不限制日期)
         var (year, month) = SelectYearMonth(!string.IsNullOrWhiteSpace(query));
