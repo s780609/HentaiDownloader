@@ -128,6 +128,9 @@ class Program
         int successCount = 0;
         int failCount = 0;
 
+        // 批次下載共用同一個瀏覽器實例，避免反覆啟動瀏覽器導致卡住
+        await using var browser = await VideoExtractorService.LaunchBrowserAsync();
+
         for (int i = 0; i < selectedVideos.Count; i++)
         {
             var video = selectedVideos[i];
@@ -137,8 +140,8 @@ class Program
 
             try
             {
-                // 從網頁提取影片 URL
-                string? videoUrl = await VideoExtractorService.ExtractVideoUrlFromPageAsync(video.Url);
+                // 從網頁提取影片 URL（使用共用瀏覽器）
+                string? videoUrl = await VideoExtractorService.ExtractVideoUrlFromPageAsync(video.Url, browser);
 
                 if (string.IsNullOrEmpty(videoUrl))
                 {

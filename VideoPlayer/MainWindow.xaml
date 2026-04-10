@@ -453,9 +453,9 @@
                                     AutoPlay="True"
                                     Stretch="Uniform">
                     <MediaPlayerElement.TransportControls>
-                        <MediaTransportControls IsCompact="False"
+                        <MediaTransportControls IsCompact="True"
                                                 ShowAndHideAutomatically="False"
-                                                IsZoomButtonVisible="True"
+                                                IsZoomButtonVisible="False"
                                                 IsZoomEnabled="True"
                                                 IsPlaybackRateButtonVisible="True"
                                                 IsPlaybackRateEnabled="True"
@@ -464,7 +464,8 @@
                                                 IsFastForwardButtonVisible="False"
                                                 IsFastRewindButtonVisible="False"
                                                 IsSkipForwardButtonVisible="False"
-                                                IsSkipBackwardButtonVisible="False"/>
+                                                IsSkipBackwardButtonVisible="False"
+                                                VerticalAlignment="Bottom"/>
                     </MediaPlayerElement.TransportControls>
                 </MediaPlayerElement>
 

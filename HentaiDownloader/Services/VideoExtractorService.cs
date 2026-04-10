@@ -31,13 +31,12 @@ public static class VideoExtractorService
     }
 
     /// <summary>
-    /// 從網頁中提取影片 URL
+    /// 啟動共用瀏覽器實例（批次下載時使用，呼叫端負責 Dispose）
     /// </summary>
-    public static async Task<string?> ExtractVideoUrlFromPageAsync(string pageUrl)
+    public static async Task<IBrowser> LaunchBrowserAsync()
     {
-        // 嘗試使用本機 Chrome
         var chromePath = GetLocalChromePath();
-        
+
         if (chromePath != null)
         {
             Console.WriteLine($"使用本機 Chrome: {chromePath}");
@@ -50,12 +49,11 @@ public static class VideoExtractorService
 
             var browserFetcher = BrowserHelper.CreateBrowserFetcher();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            
-            // 顯示下載進度的動畫
+
             var downloadTask = browserFetcher.DownloadAsync();
             var spinnerChars = new[] { '|', '/', '-', '\\' };
             int spinnerIndex = 0;
-            
+
             while (!downloadTask.IsCompleted)
             {
                 var elapsed = stopwatch.Elapsed;
@@ -63,10 +61,9 @@ public static class VideoExtractorService
                 spinnerIndex = (spinnerIndex + 1) % spinnerChars.Length;
                 await Task.Delay(200);
             }
-            
-            // 確保任務完成（處理可能的異常）
+
             await downloadTask;
-            
+
             stopwatch.Stop();
             Console.WriteLine();
             Console.WriteLine($"✅ Chromium 下載完成！耗時: {stopwatch.Elapsed.TotalSeconds:F1} 秒");
@@ -75,20 +72,35 @@ public static class VideoExtractorService
 
         Console.WriteLine("正在啟動瀏覽器...");
 
-        await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+        return await Puppeteer.LaunchAsync(new LaunchOptions
         {
-            Headless = true, // 無頭模式
-            ExecutablePath = chromePath, // 使用本機 Chrome (如果有的話)
+            Headless = true,
+            ExecutablePath = chromePath,
             Args = new[]
             {
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-web-security",
-                "--autoplay-policy=no-user-gesture-required" // 允許自動播放
+                "--autoplay-policy=no-user-gesture-required"
             }
         });
+    }
 
+    /// <summary>
+    /// 從網頁中提取影片 URL（自動啟動並關閉瀏覽器，適合單一下載）
+    /// </summary>
+    public static async Task<string?> ExtractVideoUrlFromPageAsync(string pageUrl)
+    {
+        await using var browser = await LaunchBrowserAsync();
+        return await ExtractVideoUrlFromPageAsync(pageUrl, browser);
+    }
+
+    /// <summary>
+    /// 從網頁中提取影片 URL（使用既有瀏覽器，適合批次下載）
+    /// </summary>
+    public static async Task<string?> ExtractVideoUrlFromPageAsync(string pageUrl, IBrowser browser)
+    {
         await using var page = await browser.NewPageAsync();
 
         // 設定 User-Agent 避免被偵測
