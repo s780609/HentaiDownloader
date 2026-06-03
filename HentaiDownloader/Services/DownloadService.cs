@@ -223,6 +223,32 @@ public static class DownloadService
         // 取得 baseUrl (去掉檔名)
         string baseUrl = url.Substring(0, url.LastIndexOf('/') + 1);
 
+        // 若為 master playlist (含多畫質變體)，自動挑選最高畫質的子清單
+        // 最多解析 5 層，避免異常巢狀造成無限迴圈
+        int safety = 0;
+        while (IsMasterPlaylist(m3u8Content) && safety++ < 5)
+        {
+            string? variantUrl = SelectHighestQualityVariant(m3u8Content, baseUrl);
+            if (string.IsNullOrEmpty(variantUrl))
+            {
+                break;
+            }
+
+            Console.WriteLine($"偵測到 master playlist，已選擇最高畫質子清單: {variantUrl}");
+            url = variantUrl;
+            baseUrl = url.Substring(0, url.LastIndexOf('/') + 1);
+
+            try
+            {
+                m3u8Content = await _httpClient.GetStringAsync(url);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"下載子清單失敗: {ex.Message}");
+                return;
+            }
+        }
+
         Console.WriteLine("--- M3U8 內容預覽 ---");
         var previewLines = m3u8Content.Split('\n').Take(15);
         foreach (var line in previewLines)
@@ -532,6 +558,85 @@ public static class DownloadService
         }
 
         return info;
+    }
+
+    /// <summary>
+    /// 判斷 M3U8 內容是否為 master playlist (含多畫質變體串流)
+    /// </summary>
+    private static bool IsMasterPlaylist(string content)
+    {
+        return content.Contains("#EXT-X-STREAM-INF", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 從 master playlist 選擇最高畫質的變體子清單 URL
+    /// 優先以 BANDWIDTH 比較，無 BANDWIDTH 時改用 RESOLUTION 像素數
+    /// </summary>
+    private static string? SelectHighestQualityVariant(string content, string baseUrl)
+    {
+        var lines = content.Split('\n');
+        long bestScore = -1;
+        string? bestUrl = null;
+        string? bestLabel = null;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].Trim();
+            if (!line.StartsWith("#EXT-X-STREAM-INF", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // 解析 BANDWIDTH 與 RESOLUTION
+            long bandwidth = 0;
+            var bwMatch = Regex.Match(line, @"BANDWIDTH=(\d+)");
+            if (bwMatch.Success)
+            {
+                long.TryParse(bwMatch.Groups[1].Value, out bandwidth);
+            }
+
+            long resolutionPixels = 0;
+            var resMatch = Regex.Match(line, @"RESOLUTION=(\d+)x(\d+)");
+            if (resMatch.Success)
+            {
+                long.TryParse(resMatch.Groups[1].Value, out long w);
+                long.TryParse(resMatch.Groups[2].Value, out long h);
+                resolutionPixels = w * h;
+            }
+
+            // 找出此 STREAM-INF 後的下一條非註解行作為變體 URL
+            string? variant = null;
+            for (int j = i + 1; j < lines.Length; j++)
+            {
+                string next = lines[j].Trim();
+                if (string.IsNullOrEmpty(next) || next.StartsWith("#"))
+                {
+                    continue;
+                }
+                variant = next;
+                break;
+            }
+
+            if (variant == null)
+            {
+                continue;
+            }
+
+            long score = bandwidth > 0 ? bandwidth : resolutionPixels;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestUrl = ResolveUrl(variant, baseUrl);
+                bestLabel = resMatch.Success ? resMatch.Value : $"BANDWIDTH={bandwidth}";
+            }
+        }
+
+        if (bestUrl != null)
+        {
+            Console.WriteLine($"最高畫質變體: {bestLabel}");
+        }
+
+        return bestUrl;
     }
 
     private static string ResolveUrl(string url, string baseUrl)
