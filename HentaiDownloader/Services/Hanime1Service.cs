@@ -66,12 +66,14 @@ public static class Hanime1Service
             if (installedBrowser == null)
             {
                 Console.WriteLine("📥 首次使用，正在下載瀏覽器...");
-                await browserFetcher.DownloadAsync();
+                installedBrowser = await browserFetcher.DownloadAsync();
             }
 
             var launchOptions = new LaunchOptions
             {
                 Headless = true,
+                // 明確指定執行檔路徑，否則 Puppeteer 會用預設快取路徑（與 .puppeteer 不一致）導致找不到瀏覽器
+                ExecutablePath = installedBrowser.GetExecutablePath(),
                 Args = new[] { "--no-sandbox", "--disable-setuid-sandbox" }
             };
 
