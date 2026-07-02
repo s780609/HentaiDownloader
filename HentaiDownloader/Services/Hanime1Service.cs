@@ -37,7 +37,9 @@ public static class Hanime1Service
             encodedDate = HttpUtility.UrlEncode(dateParam);
         }
         
-        string searchUrl = $"https://hanime1.me/search?query={encodedQuery}&type=&genre=%E8%A3%8F%E7%95%AA&sort=&date={encodedDate}&duration=";
+        // 有搜尋關鍵字時不限制分類（部分作品不屬於裏番），無關鍵字時維持預設只列裏番
+        string encodedGenre = string.IsNullOrWhiteSpace(query) ? "%E8%A3%8F%E7%95%AA" : "";
+        string searchUrl = $"https://hanime1.me/search?query={encodedQuery}&type=&genre={encodedGenre}&sort=&date={encodedDate}&duration=";
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -90,8 +92,8 @@ public static class Hanime1Service
                 Timeout = 60000
             });
 
-            // 等待影片清單載入
-            await page.WaitForSelectorAsync(".home-rows-videos-wrapper", new WaitForSelectorOptions { Timeout = 30000 });
+            // 等待影片清單載入（裏番頁為列表版型，無分類過濾的搜尋頁為卡片版型）
+            await page.WaitForSelectorAsync(".home-rows-videos-wrapper, a.video-link", new WaitForSelectorOptions { Timeout = 30000 });
 
             // 取得 HTML 內容
             string html = await page.GetContentAsync();
@@ -117,18 +119,20 @@ public static class Hanime1Service
         var videos = new List<VideoInfo>();
 
         // 找到 home-rows-videos-wrapper 區塊
-        var wrapperMatch = Regex.Match(html, @"<div class=""home-rows-videos-wrapper""[^>]*>(.*?)</div>\s*</div>\s*</div>", RegexOptions.Singleline);
-        if (!wrapperMatch.Success)
-        {
-            // 嘗試另一種方式
-            wrapperMatch = Regex.Match(html, @"class=""home-rows-videos-wrapper""[^>]*>(.+)", RegexOptions.Singleline);
-        }
-
+        // 取其後全部內容即可，不可依賴 </div> 數量截斷（卡片內層結構會隨網站改版變動）
+        var wrapperMatch = Regex.Match(html, @"class=""home-rows-videos-wrapper""[^>]*>(.+)", RegexOptions.Singleline);
         string content = wrapperMatch.Success ? wrapperMatch.Groups[1].Value : html;
 
         // 解析每個影片連結 - 只抓取 hanime1.me/watch 的連結
         var linkPattern = @"<a[^>]*href=""(https://hanime1\.me/watch\?v=\d+)""[^>]*>.*?<div class=""home-rows-videos-title""[^>]*>([^<]+)</div>";
         var matches = Regex.Matches(content, linkPattern, RegexOptions.Singleline);
+
+        // 卡片式版型（無分類過濾的搜尋結果頁）: <a class="video-link" href="..."> ... <div class="title">標題</div></a>
+        if (matches.Count == 0)
+        {
+            var cardPattern = @"<a[^>]*href=""(https://hanime1\.me/watch\?v=\d+)""[^>]*>(?:(?!</a>).)*?<div class=""title""[^>]*>\s*([^<]+?)\s*</div>";
+            matches = Regex.Matches(html, cardPattern, RegexOptions.Singleline);
+        }
 
         foreach (Match match in matches)
         {
